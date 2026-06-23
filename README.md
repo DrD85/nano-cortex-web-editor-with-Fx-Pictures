@@ -5,6 +5,8 @@ A browser-based editor for the Neural DSP Nano Cortex. Connects directly to your
 
 Unofficial community project. Not affiliated with or endorsed by Neural DSP. Use at your own risk.
 
+To use the version with the fx pixtures please use the index_mit_bildern.html and the img folder in the same directory
+
 
 
 **Features**
