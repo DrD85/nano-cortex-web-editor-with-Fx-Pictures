@@ -1,4 +1,4 @@
-**Nano Cortex Web Editor**
+Nano Cortex Web Editor with FX Picture oroginal done by Choldy
 
 A browser-based editor for the Neural DSP Nano Cortex. Connects directly to your device over Bluetooth — no app install required.
 
@@ -16,7 +16,8 @@ Capture & Cab/IR management — select capture slots, IR slots, mic types, and p
 Full FX editing — all Overdrive, Modulation, Delay, Reverb, Utility, Compressor, Pitch, Wah/Filter, and EQ effects with complete parameter control
 Gate control — on/off toggle and reduction amount
 Preset switching — change presets via Web MIDI
-Save — write changes back to the current preset on the device
+Save — write changes back to the current preset on the devic
+See pictures of the selected FX
 
 
 **Requirements**
@@ -34,7 +35,7 @@ Web Bluetooth is not available on Firefox, Safari, or mobile browsers.
 
 **Getting Started**
 
-
+Copy the index_mit_bildern.html and the img folder in the same directory
 Power on your Nano Cortex and make sure Bluetooth is enabled
 Open the editor in Chrome or Edge
 Click Connect and select your device from the Bluetooth pairing dialog
