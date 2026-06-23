@@ -1,3 +1,7 @@
+<img width="1490" height="736" alt="image" src="https://github.com/user-attachments/assets/964822d2-697a-4002-a5df-209099af93b7" />
+
+
+
 Nano Cortex Web Editor with FX Picture oroginal done by Choldy
 
 A browser-based editor for the Neural DSP Nano Cortex. Connects directly to your device over Bluetooth — no app install required.
