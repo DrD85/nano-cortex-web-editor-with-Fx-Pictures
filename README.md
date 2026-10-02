@@ -1,8 +1,13 @@
+Update: 02.10:
+
+
+
+
 <img width="1490" height="736" alt="image" src="https://github.com/user-attachments/assets/964822d2-697a-4002-a5df-209099af93b7" />
 
 
 
-Nano Cortex Web Editor with FX Picture oroginal done by Choldy
+Nano Cortex Web Editor with FX Picture original done by Choldy
 
 https://github.com/choldy/nano-cortex-web-editor
 
