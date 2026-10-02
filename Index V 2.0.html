@@ -329,6 +329,7 @@
     <section class="toolbar">
       <button id="connectBtn" class="primary">Connect</button>
       <button id="saveBtn" class="primary">Save</button>
+      <button id="renameBtn" class="btn-small">Rename</button>
       <span></span>
       <div class="preset-wrap"><label for="presetSelect">Preset</label><select id="presetSelect"></select></div>
     </section>
@@ -872,8 +873,8 @@
       server: null,
       c304: null,
       c305: null,
-      midiAccess: null,
-      midiOutput: null,
+      presetSlots: { a1: -1, b1: -1, a2: -1, b2: -1 },
+      presetDirty: false,
       connected: false,
       selectedPreset: 1,
       presetNames: new Map(),
@@ -1005,7 +1006,6 @@
 
     async function connectAll() {
       await connectNano();
-      await connectMIDI();
       if (state.connected) {
         await syncMetadataAndState();
       }
@@ -1060,33 +1060,6 @@
       }
     }
 
-    async function connectMIDI() {
-      try {
-        if (!navigator.requestMIDIAccess) throw new Error('Web MIDI is not available. Use Chrome or Edge.');
-        const access = state.midiAccess || await navigator.requestMIDIAccess({ sysex: false });
-        if (!state.midiAccess) {
-          state.midiAccess = access;
-          // Pick up the USB cable when it is plugged in after connecting.
-          access.onstatechange = () => { if (!state.midiOutput || state.midiOutput.state !== 'connected') connectMIDI(); };
-        }
-        const outputs = Array.from(access.outputs.values()).filter(output => output.state !== 'disconnected');
-        log('MIDI outputs: ' + (outputs.map(output => output.name).join(', ') || 'none'));
-        // The Nano only accepts Program Change over USB MIDI (port name "Nano Cortex").
-        const nanoOutput = outputs.find(output => {
-          const name = (output.name || '').toLowerCase();
-          return name.includes('nano') || name.includes('cortex') || name.includes('neural');
-        });
-        if (!nanoOutput) throw new Error('No Nano Cortex MIDI output found. Connect the Nano via USB cable to switch presets.');
-        state.midiOutput = nanoOutput;
-        log('MIDI output selected: ' + nanoOutput.name);
-        if (state.connected) setStatus('Connected', true);
-      } catch (err) {
-        state.midiOutput = null;
-        log('MIDI connect failed: ' + err.message);
-        if (state.connected) setStatus('Connected – USB-Kabel für Preset-Wechsel anschließen', true);
-      }
-    }
-
     async function syncMetadataAndState() {
       log('Sync started');
 
@@ -1099,9 +1072,6 @@
         log('Metadata already loaded for this session; skipping FE metadata request.');
 
         renderPresetSelect();
-
-        if (state.midiOutput) sendPresetChange(state.selectedPreset);
-
         beginPresetLoad();
         return;
       }
@@ -1109,11 +1079,7 @@
       await writeC304('FE metadata request', bytesFromHex('06 C0 08 03 01 00 00 00'));
 
       setTimeout(() => {
-        state.selectedPreset = 1;
         renderPresetSelect();
-
-        if (state.midiOutput) sendPresetChange(1);
-
         beginPresetLoad();
       }, 2200);
     }
@@ -1148,7 +1114,7 @@
       state.c305 = null;
       state.protocol.metadataLoaded = false;
       state.protocol.feSyncComplete = false;
-      gattWriteQueue = Promise.resolve();
+      gattWriteQueue.length = 0;
       setStatus('Disconnected');
       log('Disconnected.');
     }
@@ -1169,10 +1135,7 @@
         return;
       }
 
-      if (data[0] === 0x10 && data[1] === 0xC0) {
-        log('Preset change ACK: ' + hex(data));
-        return;
-      }
+      if (handleTypedMessage(data)) return;
 
       if (isFEStreamPacket(data)) {
         if (state.stateMode === 'current') {
@@ -1224,6 +1187,14 @@
       state.amp.treble = fields[7] && fields[7][0] ? fields[7][0].value : 0;
 
       state.gate.on = !(fields[54] && fields[54][0]);
+
+      // StateResponseMessage: 13 currentPresetIndex, 14/15/38/39 footswitch slots,
+      // 41 currentPresetDirty. The device omits zero values.
+      const varintField = (n, fallback) => fields[n] && fields[n][0] && fields[n][0].wire === 0 ? fields[n][0].value : fallback;
+      state.selectedPreset = varintField(13, 0) + 1;
+      state.presetSlots = { a1: varintField(14, 0), b1: varintField(15, 0), a2: varintField(38, 0), b2: varintField(39, 0) };
+      state.presetDirty = Boolean(varintField(41, 0));
+      log('Current preset: ' + state.selectedPreset + (state.presetDirty ? ' (edited)' : ''));
 
     if (fields[31] && fields[31][0]) {
       log('FX enable field 31 raw: ' + hex(fields[31][0].raw));
@@ -1555,14 +1526,8 @@
       );
     }
 
-    // The first byte is the frame length, which varies with the cab/mic name
-    // length, so it must not be matched. FX param replies continue with 0x22.
     function isCabIRParamRefreshResponse(data) {
-      return data.length > 20 &&
-        data[4] !== 0x22 &&
-        data[1] === 0xC0 &&
-        data[2] === 0x08 &&
-        data[3] === 0x06;
+      return data.length > 20 && frameType(data) === MSG.RetrievePresetCabinetSettingsLiteResponse;
     }
 
     function handleCabIRParamRefreshResponse(data) {
@@ -2089,10 +2054,73 @@ function parseSelectedCaptureState(payload) {
       return new TextDecoder().decode(new Uint8Array(bytes));
     }
 
+    // Message framing and types as used by the official Cortex Cloud app (AumMessage):
+    // [len = frame.length - 2] C0 [protobuf payload] [u32 LE message type].
+    const MSG = {
+      SetPresetSlotsRequest: 29,
+      SetPresetSlotsResponse: 30,
+      RetrievePresetCabinetSettingsLiteResponse: 96,
+      RenamePresetRequest: 111,
+      RenamePresetResponse: 112,
+      PresetDirtyStateChanged: 115
+    };
+    const PRESET_SLOT_OTHER = 4; // PresetSlotType: 0 A1, 1 B1, 2 A2, 3 B2, 4 other
+
+    function buildFrame(payload, type) {
+      const frame = [0, 0xC0, ...payload, type & 0xFF, (type >> 8) & 0xFF, 0, 0];
+      frame[0] = frame.length - 2;
+      return new Uint8Array(frame);
+    }
+
+    function frameType(data) {
+      if (data.length < 6 || data[1] !== 0xC0) return null;
+      const n = data.length;
+      return (data[n - 4] | (data[n - 3] << 8) | (data[n - 2] << 16) | (data[n - 1] << 24)) >>> 0;
+    }
+
+    function framePayloadFields(data) {
+      return parseProtoFields(data.slice(2, data.length - 4));
+    }
+
+    // protobuf int32: negative values are sign-extended to a 10-byte varint.
+    function encodeInt32(value) {
+      if (value >= 0) return encodeVarint(value);
+      let x = BigInt.asUintN(64, BigInt(value));
+      const out = [];
+      while (x > 0x7Fn) {
+        out.push(Number(x & 0x7Fn) | 0x80);
+        x >>= 7n;
+      }
+      out.push(Number(x));
+      return out;
+    }
+
+    // SetPresetSlotsRequestMessage exactly as the app's changePreset() builds it:
+    // 3 context=PlayMode, 4 currentPresetIndex, 5-8 footswitch slots = -1 (unchanged),
+    // 9 currentSlot (which footswitch slot holds this preset, else OTHER).
+    function presetChangeFrame(presetIndex) {
+      const slots = state.presetSlots;
+      const slotIndex = [slots.a1, slots.b1, slots.a2, slots.b2].indexOf(presetIndex);
+      const currentSlot = slotIndex === -1 ? PRESET_SLOT_OTHER : slotIndex;
+      return buildFrame([
+        0x18, 0x00,
+        0x20, ...encodeVarint(presetIndex),
+        0x28, ...encodeInt32(-1),
+        0x30, ...encodeInt32(-1),
+        0x38, ...encodeInt32(-1),
+        0x40, ...encodeInt32(-1),
+        0x48, currentSlot
+      ], MSG.SetPresetSlotsRequest);
+    }
+
+    // SetPresetSlotsResponseMessage { 4: status = Success }. The app sends it whenever
+    // the device reports a preset change; without it the Nano waits in a pending
+    // preset-change state (= the ack used by rixrix/deskop-nano-cortex).
+    const PRESET_CHANGE_ACK = buildFrame([0x20, 0x01], MSG.SetPresetSlotsResponse);
+
     async function selectPreset(preset) {
-      if (!state.midiOutput) await connectMIDI();
-      if (!state.midiOutput) {
-        log('Preset ' + preset + ' not sent: no USB MIDI connection to the Nano.');
+      if (!state.connected) {
+        log('Preset ' + preset + ' not sent: not connected.');
         renderPresetSelect();
         return;
       }
@@ -2102,27 +2130,84 @@ function parseSelectedCaptureState(payload) {
       state.cabIR.lastActiveSlot = null;
       renderPresetSelect();
 
-      if (!state.midiOutput) { 
-        log('Preset ' + preset + ' selected in UI, but MIDI is not connected yet.'); 
-        return; 
-      }
-
-      sendPresetChange(preset);
+      await writeC304('Preset change ' + preset, presetChangeFrame(preset - 1));
       beginPresetLoad();
     }
 
-    // Preset-change acknowledgement, written to C304 after every Program Change while
-    // BLE is connected (flow: PC -> ack -> state request). Without it the Nano stays in a
-    // pending preset-change context and ignores further PCs and capture/cab/FX writes
-    // until EXIT is pressed on the device.
-    // Source: rixrix/deskop-nano-cortex, ble_encoder.rs preset_change_ack_frame (Apache-2.0).
-    const PRESET_CHANGE_ACK = new Uint8Array([0x06, 0xC0, 0x20, 0x01, 0x1E, 0x00, 0x00, 0x00]);
+    // Single-packet messages identified by their type. Returns true when handled.
+    function handleTypedMessage(data) {
+      const type = frameType(data);
 
-    function sendPresetChange(preset) {
-      const pc = preset - 1;
-      state.midiOutput.send([0xC0, pc]);
-      log('MIDI PC sent: preset ' + preset + ', PC ' + pc);
-      if (state.connected) writeC304('Preset change ack', PRESET_CHANGE_ACK);
+      if (type === MSG.SetPresetSlotsRequest) {
+        // Preset changed on the device (footswitch, knob) - mirror the app: update,
+        // acknowledge, then re-read the state.
+        const fields = framePayloadFields(data);
+        const value = (n, fallback) => fields[n] && fields[n][0] ? fields[n][0].value : fallback;
+        state.selectedPreset = value(4, 0) + 1;
+        state.presetSlots = { a1: value(5, 0), b1: value(6, 0), a2: value(7, 0), b2: value(8, 0) };
+        log('Device preset change: preset ' + state.selectedPreset);
+        renderPresetSelect();
+        writeC304('Preset change ack', PRESET_CHANGE_ACK);
+        beginPresetLoad();
+        return true;
+      }
+
+      if (type === MSG.SetPresetSlotsResponse) {
+        const fields = framePayloadFields(data);
+        const ok = fields[4] && fields[4][0] && fields[4][0].value === 1;
+        log('Preset change ' + (ok ? 'confirmed' : 'FAILED') + ': ' + hex(data));
+        return true;
+      }
+
+      if (type === MSG.RenamePresetResponse) {
+        const fields = framePayloadFields(data);
+        const ok = fields[4] && fields[4][0] && fields[4][0].value === 1;
+        log('Rename ' + (ok ? 'confirmed' : 'FAILED: ' + (firstString(fields, 5) || hex(data))));
+        if (!ok) syncPresetNames();
+        return true;
+      }
+
+      if (type === MSG.PresetDirtyStateChanged) {
+        const fields = framePayloadFields(data);
+        state.presetDirty = Boolean(fields[3] && fields[3][0] && fields[3][0].value);
+        renderPresetSelect();
+        return true;
+      }
+
+      return false;
+    }
+
+    async function renamePreset() {
+      if (!state.connected) return;
+
+      const preset = state.selectedPreset;
+      const current = state.presetNames.get(preset) || '';
+      const entered = window.prompt('New name for preset ' + preset, current);
+      if (entered === null) return;
+
+      const name = entered.trim();
+      if (name.length < 4) { window.alert('Preset name must have at least 4 characters.'); return; }
+      const taken = Array.from(state.presetNames.entries()).some(([i, n]) => i !== preset && String(n).trim().toLowerCase() === name.toLowerCase());
+      if (taken) { window.alert('This preset name already exists.'); return; }
+
+      const nameBytes = Array.from(new TextEncoder().encode(name));
+      if (nameBytes.length > 64) { window.alert('Preset name is too long.'); return; }
+
+      // RenamePresetRequestMessage { 1: action=UPDATE, 3: presetIndex, 4: presetNewName }
+      await writeC304('Rename preset ' + preset + ' to "' + name + '"', buildFrame([
+        0x08, 0x01,
+        0x18, ...encodeVarint(preset - 1),
+        0x22, nameBytes.length, ...nameBytes
+      ], MSG.RenamePresetRequest));
+
+      state.presetNames.set(preset, name);
+      renderPresetSelect();
+    }
+
+    // Re-read the preset names after a failed rename.
+    function syncPresetNames() {
+      state.protocol.metadataLoaded = false;
+      syncMetadataAndState();
     }
 
     async function refreshLists() { await syncMetadataAndState(); }
@@ -2453,7 +2538,8 @@ function parseSelectedCaptureState(payload) {
       for (let i = 1; i <= 64; i++) {
         const option = document.createElement('option');
         option.value = i;
-        option.textContent = i + '. ' + (state.presetNames.get(i) || ('Preset ' + i));
+        option.textContent = i + '. ' + (state.presetNames.get(i) || ('Preset ' + i)) +
+          (i === state.selectedPreset && state.presetDirty ? ' *' : '');
         if (i === state.selectedPreset) option.selected = true;
         select.appendChild(option);
       }
@@ -3131,6 +3217,7 @@ function renderGate() {
     $('refreshBtn').addEventListener('click', refreshLists);
     $('disconnectBtn').addEventListener('click', disconnect);
     $('saveBtn').addEventListener('click', savePreset);
+    $('renameBtn').addEventListener('click', renamePreset);
     $('copyLogBtn').addEventListener('click', copyLog);
     $('presetSelect').addEventListener('change', e => selectPreset(Number(e.target.value)));
 
