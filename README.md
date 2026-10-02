@@ -1,5 +1,6 @@
 Update: 02.10:
-
+- Response Time is now much faster and without data Loss
+- Preset switching works more reliably and faster
 
 
 
