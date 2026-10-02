@@ -1,0 +1,3778 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nano Cortex Web Editor Prototype</title>
+  <style>
+    :root {
+      --bg: #000000;
+      --panel: #141414;
+      --panel2: #1c1c1c;
+      --border: #2e2e2e;
+      --text: #f2f2f2;
+      --muted: #9a9a9a;
+      --accent: #e9e9e9;
+      --green: #7fd35a;
+      --cyan: #22c7d7;
+      --purple: #8d67d9;
+      --pink: #d64b86;
+      --red: #d95043;
+      --white: #d8d8d8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #161616 0%, #000000 60%);
+      color: var(--text);
+    }
+
+    header {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 0 24px;
+      border-bottom: 1px solid #171717;
+      background: rgba(0, 0, 0, 0.76);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 {
+      font-size: 15px;
+      letter-spacing: 0.16em;
+      color: #f4f4f4;
+      margin: 0;
+      font-weight: 650;
+      text-transform: uppercase;
+    }
+
+    .logo { width: 28px; height: 20px; opacity: 0.95; }
+
+    .status {
+      margin-left: auto;
+      font-size: 14px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot { width: 9px; height: 9px; border-radius: 999px; background: #555; }
+    .dot.connected { background: #45e35f; box-shadow: 0 0 10px rgba(69, 227, 95, 0.45); }
+
+    button, select, input { font: inherit; }
+
+    button {
+      background: linear-gradient(180deg, #191b1d, #111315);
+      color: var(--text);
+      border: 1px solid #3a3d40;
+      border-radius: 8px;
+      padding: 10px 18px;
+      cursor: pointer;
+      font-weight: 650;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    button:hover { border-color: var(--accent); }
+    button.primary { border-color: #8a8a8a; color: #ffffff; }
+
+    button.btn-small {
+      padding: 5px 12px;
+      font-size: 11px;
+      border-radius: 6px;
+      margin-left: 4px;
+    }
+
+    button.btn-disconnect { border-color: #7a2020; color: #e07070; }
+    button.btn-disconnect:hover { border-color: #e07070; }
+
+    main { padding: 24px; display: grid; gap: 18px; }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 18px;
+      align-items: center;
+    }
+
+    .toolbar-actions { display: flex; gap: 12px; }
+
+    .preset-bar { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; gap: 10px; }
+    .preset-field { position: relative; min-width: 0; }
+    .preset-field label {
+      position: absolute;
+      left: 17px;
+      top: 8px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+    #presetSelect {
+      height: 62px;
+      padding: 22px 16px 6px;
+      font-size: 22px;
+      font-weight: 650;
+      color: #ffffff;
+      background: #141414;
+      border-color: #3a3a3a;
+      text-overflow: ellipsis;
+    }
+    .preset-step { padding: 0; font-size: 28px; line-height: 1; letter-spacing: 0; }
+
+    select {
+      width: 100%;
+      background: #111315;
+      color: var(--text);
+      border: 1px solid #3a3d40;
+      border-radius: 8px;
+      padding: 10px 13px;
+      outline: none;
+      appearance: auto;
+    }
+
+    select:focus { border-color: var(--accent); }
+
+    .top-row { display: grid; grid-template-columns: 1.25fr 1.35fr 0.55fr; gap: 18px; align-items: stretch; }
+
+    .top-card, .block {
+      background: linear-gradient(180deg, rgba(23, 25, 27, 0.94), rgba(9, 10, 11, 0.94));
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.015);
+    }
+
+    .top-card { min-height: 120px; padding: 14px; }
+    .top-card h2, .block h2 {
+      margin: 0 0 12px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      color: #d4d4d4;
+      text-transform: uppercase;
+    }
+    
+    .current-item {
+     margin-top: 10px;
+     color: #cfcfcf;
+     font-size: 13px;
+     line-height: 1.35;
+     min-height: 18px;
+    }
+
+    .gate-layout { display: grid; grid-template-columns: 1fr; gap: 10px; align-items: start; }
+    .chain-title { color: var(--muted); font-size: 13px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: -6px; }
+    .chain { display: grid; grid-template-columns: repeat(5, minmax(190px, 1fr)); gap: 14px; overflow-x: auto; padding-bottom: 4px; }
+
+    .block { min-height: 465px; padding: 16px; border-color: color-mix(in srgb, var(--block-color) 55%, var(--border)); }
+
+    .amp-panel {
+      background: linear-gradient(180deg, rgba(23, 25, 27, 0.94), rgba(9, 10, 11, 0.94));
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.015);
+      border-color: color-mix(in srgb, var(--block-color) 55%, var(--border));
+      padding: 16px;
+    }
+    .block.active { border-color: var(--block-color); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--block-color) 20%, transparent); }
+
+    .block-head { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .block h2 { color: #ececec; margin: 0; }
+    .block-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .block-title h2 { margin: 0; }
+    .block:not(.active) .fx-icon { opacity: 0.45; }
+    .fx-icon-empty { background: none; border: 1px dashed #4a4a4a; }
+    .fx-icon-empty::after { display: none; }
+    .amp-panel h2 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.14em; color: #ececec; text-transform: uppercase; }
+    .model-select { border-color: color-mix(in srgb, var(--block-color) 42%, #333); margin-bottom: 14px; }
+    .divider { height: 1px; background: #2d3033; margin: 12px 0 18px; }
+
+    .toggle-switch {
+      width: 46px;
+      height: 24px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--block-color) 65%, #555);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .toggle-switch.on { justify-content: flex-end; }
+    .toggle-dot { width: 18px; height: 18px; border-radius: 50%; background: #d8d8d8; box-shadow: 0 0 10px color-mix(in srgb, var(--block-color) 45%, transparent); }
+    .toggle-switch.on .toggle-dot { background: var(--block-color); }
+
+    .param-grid { display: grid; grid-template-columns: repeat(2, minmax(78px, 1fr)); gap: 14px 12px; align-items: start; }
+    .knob-param { display: grid; justify-items: center; gap: 6px; }
+    .param-name { color: #d0d0d0; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; text-align: center; min-height: 14px; }
+
+    .knob {
+      --pct: 50%;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 50%, #121212 0 46%, transparent 48%),
+        conic-gradient(from 220deg, var(--block-color) 0 var(--pct), #2a2c2e var(--pct) 73%, transparent 73% 100%);
+      border: 1px solid #070707;
+      position: relative;
+      box-shadow: inset 0 0 10px rgba(0,0,0,.9), 0 0 0 1px #242424;
+      cursor: ns-resize;
+    }
+
+    .knob::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 8px;
+      width: 2px;
+      height: 18px;
+      background: #e8e8e8;
+      border-radius: 2px;
+      transform-origin: 50% 20px;
+      transform: translateX(-50%) rotate(var(--angle));
+    }
+
+    .value-text { color: #c9c9c9; font-size: 12px; cursor: pointer; padding: 2px 6px; border-radius: 5px; }
+    .value-text:hover { background: rgba(255,255,255,.08); color: #fff; }
+
+    .switch-param { display: grid; justify-items: center; gap: 6px; min-width: 0; }
+    .switch-pill {
+      min-width: 58px;
+      max-width: 76px;
+      padding: 7px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      line-height: 1;
+      color: var(--block-color);
+      border-color: var(--block-color);
+      background: color-mix(in srgb, var(--block-color) 10%, #111315);
+      letter-spacing: 0.04em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .switch-pill:hover { border-color: var(--block-color); }
+
+    .unsupported { display: none; padding: 12px; border: 1px solid #5a2c2c; background: #1c0f0f; color: #ffb2b2; border-radius: 10px; }
+
+
+    .knob-param.param-disabled,
+    .switch-param.param-disabled,
+    .stepped-param.param-disabled {
+      opacity: 0.38;
+      filter: grayscale(0.6);
+      pointer-events: none;
+    }
+
+    .mini-param-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(70px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .placeholder-param {
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+      opacity: 0.46;
+      pointer-events: none;
+    }
+
+    .range-input {
+      width: 100%;
+      accent-color: var(--block-color);
+    }
+
+    .stepped-param {
+      grid-column: span 2;
+      display: grid;
+      gap: 7px;
+      justify-items: center;
+    }
+
+    .stepped-select {
+      width: 160px;
+      border-color: color-mix(in srgb, var(--block-color) 45%, #333);
+    }
+
+    .param-unit {
+      color: #8f8f8f;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      min-height: 12px;
+    }
+
+    .beta-footer {
+      border-top: 1px solid #24272a;
+      padding: 14px 4px 2px;
+      color: #8f8f8f;
+      font-size: 11px;
+      line-height: 1.5;
+      letter-spacing: 0.04em;
+      text-align: center;
+    }
+
+    .beta-footer strong { color: #cfcfcf; font-weight: 650; }
+
+    /* Block icons from the official Cortex Cloud app (white masks, tinted with --block-color). Private use only. */
+    :root {
+      --ico-overdrive: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAO5SURBVHgB7ZyBcdswDEXhTpBOUG/QbFBu0GyQbuBu0G6QbBBvUGcCOxPEnSDeoNkAJS/KnQNRsiQCFAXi3eVy0J1FmZTwoU/SAIZhGIZhGIZhGIZhGIYxAUS8QV5+gXI+AS/fgRcHylkBE/5uvfL//gE/n1er1SsohfMJuAEZvoFiOAfglsT3qwmEz5HzODD68elnHRHQNUzAf86R87yA0Y/vpB+k055hIkFLIoN5BUY3voP2pMNuIQHu85VMsgY0qcaRw0+QxoHEDow4fgA25G7dQyIRHZAob3UQRFIiXYROJ+e9BoUkpaCmU9bkcGr6eedIYpXvA6kasCHxzpfyJ+BhR2KpF73lIpV+mnOvTQd6yCGUER1woIyUFETv9h3wQ8+pTgdSBsCReAv8PF1os06wPfEi4tdgBbbE1CeATrwcQIBmHuBEDqt8HxhMx10plpv9ue9IW3dQM9h2PkXt4lzpbjFg26kUvSNr0IHBIOPEy8h296RNNfb0WBF2JD4yWg99HKD/OuogciduIANo9vR86eesfWpLfAEFjElBrdo/U/p5h9rTKtzRMQPwk8RbyAv1hRzUgn/cr+dMPx3XUI8O+C/7QL78H5gBVGhPD01BjsQS1vMQ1NvTLWIlIM70JoptGyR5BUbxRNLPA8wExkvhRdsSQ1LQI3wsAedKP9CUvSdyuCh7Gt/cW/5raqqQ2a1gLNieJiny2f/pW8mBbXt68kJgbkJ1WEq6FgMLtac79OliKuLeIyZOM015IIe596ZNwZH45K/1eOlDixuABvrFHMwP3dH5G7SChe2iwQKsmqw0OlCMPY0JVs0iU1CjAyXZ047Es70rZQPbG0PmMgiTVoksVYQDpSxbzLJIrUhwZnt6au1/zpKfgADNtV8hL47Eg2p/NaDABsGR7b+Q9tVup40SSQHZ5iqwttq/i8hd6CADyDRNu3QNCFAdyOULOei/jjpAxt+pSGiz3hXbOIM9jTX4/mPAjKunkaH2P0eDBgRo7S05T+xIfKyq9o+BGe1prL32j4GZ7GkUqP1VpKCM9jT7b2No0YAArcMldMCReAvGGyi8iwat9r8MCtrTaLX/ZSKdxLKHDZlr/3M0aUDgQGIuIXYktto/BgrZ02i1/3CQ2Z5GYd9fWwoKcNvTkr+Lp3IA/pI4VSwdibdgdIOM9jRmqP3VPQEdtsTUzXz1rvlJAdu7aLhgtzc0akDgEfgRqf21DkDoqFfg5R4EUDkAHTqQCtdvYhuGYRiGYRiGYRiGYRiV8h94cC3AqLdGpQAAAABJRU5ErkJggg==");
+      --ico-bass-overdrive: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAO5SURBVHgB7ZyBcdswDEXhTpBOUG/QbFBu0GyQbuBu0G6QbBBvUGcCOxPEnSDeoNkAJS/KnQNRsiQCFAXi3eVy0J1FmZTwoU/SAIZhGIZhGIZhGIZhGIYxAUS8QV5+gXI+AS/fgRcHylkBE/5uvfL//gE/n1er1SsohfMJuAEZvoFiOAfglsT3qwmEz5HzODD68elnHRHQNUzAf86R87yA0Y/vpB+k055hIkFLIoN5BUY3voP2pMNuIQHu85VMsgY0qcaRw0+QxoHEDow4fgA25G7dQyIRHZAob3UQRFIiXYROJ+e9BoUkpaCmU9bkcGr6eedIYpXvA6kasCHxzpfyJ+BhR2KpF73lIpV+mnOvTQd6yCGUER1woIyUFETv9h3wQ8+pTgdSBsCReAv8PF1os06wPfEi4tdgBbbE1CeATrwcQIBmHuBEDqt8HxhMx10plpv9ue9IW3dQM9h2PkXt4lzpbjFg26kUvSNr0IHBIOPEy8h296RNNfb0WBF2JD4yWg99HKD/OuogciduIANo9vR86eesfWpLfAEFjElBrdo/U/p5h9rTKtzRMQPwk8RbyAv1hRzUgn/cr+dMPx3XUI8O+C/7QL78H5gBVGhPD01BjsQS1vMQ1NvTLWIlIM70JoptGyR5BUbxRNLPA8wExkvhRdsSQ1LQI3wsAedKP9CUvSdyuCh7Gt/cW/5raqqQ2a1gLNieJiny2f/pW8mBbXt68kJgbkJ1WEq6FgMLtac79OliKuLeIyZOM015IIe596ZNwZH45K/1eOlDixuABvrFHMwP3dH5G7SChe2iwQKsmqw0OlCMPY0JVs0iU1CjAyXZ047Es70rZQPbG0PmMgiTVoksVYQDpSxbzLJIrUhwZnt6au1/zpKfgADNtV8hL47Eg2p/NaDABsGR7b+Q9tVup40SSQHZ5iqwttq/i8hd6CADyDRNu3QNCFAdyOULOei/jjpAxt+pSGiz3hXbOIM9jTX4/mPAjKunkaH2P0eDBgRo7S05T+xIfKyq9o+BGe1prL32j4GZ7GkUqP1VpKCM9jT7b2No0YAArcMldMCReAvGGyi8iwat9r8MCtrTaLX/ZSKdxLKHDZlr/3M0aUDgQGIuIXYktto/BgrZ02i1/3CQ2Z5GYd9fWwoKcNvTkr+Lp3IA/pI4VSwdibdgdIOM9jRmqP3VPQEdtsTUzXz1rvlJAdu7aLhgtzc0akDgEfgRqf21DkDoqFfg5R4EUDkAHTqQCtdvYhuGYRiGYRiGYRiGYRiV8h94cC3AqLdGpQAAAABJRU5ErkJggg==");
+      --ico-fuzz: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFgAAABQCAYAAACdxrJZAAAACXBIWXMAACxLAAAsSwGlPZapAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAEVSURBVHgB7dlBioRAEABBHfaj+jB9qjvXcQ+NaMDCZNwE7YakqIvzdHK8TRes6/rxvG3bx/P8Nl1wvn90/sjo/mVZDnn+awpVYKzA2J/9cd6Bd3fof//+vIP3fZ+fPL8JxgqMFRgrMFZgrMBYgbECYwXGCowVGCswVmCswFiBsQJjBcYKjBUY+xm9cPcf2bdrgrECYwXGhju4nXtPE4wVGCswVmCswFiBsQJjBcYKjBUYKzBWYKzAWIGxAmMFxgqMFRgrMFZgrMBYgbECYwXGCowVGCswVmCswFiBsQJjBcYKjBUYKzBWYKzAWIGxAmMFxgqMFRgrMFZgrMBYgbECY6/jZHrYcdH0MH3f6PwmGCswVmDsF7Y9rieqfug3AAAAAElFTkSuQmCC");
+      --ico-compressor: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAQKSURBVHgB7ZyPddMwEMbPLECZAHcCugHegDJBu0HLBCkTlA3CBoUJEiZomSBhArrBh/QkPxLn5Pi/Lfv7vafmNYnl+CTdfT7JEiGEEEIIIYSQCQEgQztuhLTDGHGDZuwkAt7I9PkhzdgKaY/pyRem/EV9PgrpBmPMFeoRhfuJBj8K6nAnpFtQLxinQroF1SXpRkg/VBwFUWn/GGToIVUk6U8h/YDzknQtpF9QLkmp/fsGYUkapfaPLQZIkiSvoqcZtkKGAbokTYUMB44l6bOQYTFGv0Wk2v+QRAbABk7zYkvq37J+/NX48700xNe58/VetqlrdnilYv302qoTlPNsyqMp11ITL0mfhDi84R/QLH8P31jrqgHVn4/TjhZjiPsWhtd4EHIe3ws36IcdZi4vWwVhbxyb/k0DX7HB9kVcEm3v/8+xx1z5kkkYe9xnE2RfhPzHGh/hAGtd0QpOqVSt6/ZMfVdCHGeM/1jV8IG6VyWNkMrSKTG+NVAnisT29sA5dm0adxZAD7idu4iShl6u7ofT+Bq9+Gc/EjRpuzzt73ukRq9LQHCc8zkccctyRQF3sJIBgLs7HuXckyDgegabgYI+F7wMVVTielIZELhUR5H5T8JPafjj1A3OOxYEev9ok9/QA/J8YwF0zT+qBIQeC+Y3CqBPfI8+9wo9VTG/1dCB3j/6wifoimh+C3KtsQuNMJmLhEv4FclkInjvsenkNx00xGSW/UF3j48yEYodd0qdozNw6iInEYwDnWOWLvJOudDRJSkmGjs7B4H0hIwI9PuU+d6tQ5eko92nQE9YpjJXAqNglDv1xfX+HOi5qnsZEIRn71KZO/7iR01PBDrBch6Xgh4LBjEAdNm5W0Tvz0H44b1eA3KJ61nknHVo7ri3BV3QNf9yHxQ3F/+EgdyBqfN7oMFTWSreFe0CjdDJSPDn0Iy/TNdTBLoqynmQFvi6nwN1L2eVxjkQXtCVj4abOq7C17dGmMaZ2EGeERsD73LsMsa05Gtbccvnf4tbBp+TP9P2QdzS+TL39S1Jki9CTkH5Ku4u4MZQVUD9Lc/OYePAsvelgLsDrZxugBsNa7QbERt0rHSijQFwqYa98b9fpSbm2E/ifLstZf49f8Rqa4s51y/pmCgbwPd8O/liDXTpN/BoU9978/LOlLf+rb39Y+r9I+QUHKcdGAiHBtyoYzygr1fNhAwDdEnJrSqHokRGphIhUW1Z5l1NGviYmci+QXlCLMpl6rFt2peVfGaNz1HQF9CnHItw2/q+QPUtcTIh3YLwk5oaUUnSWGJAVue7iGhrm1gaoG6+h8G4K+DmY+sSjSSNYQQ0yXZeNDyOFEHzGSxK0rYYI16jHZkQQgghhBBCCCGEEDIR/gE4e5MeqaU1PgAAAABJRU5ErkJggg==");
+      --ico-equalizer: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAIXSURBVHgB7dztTcMwFIVhgxigI3QUNqEbMAKMwEbNBrBBRrk4qiqSSCS9ae1jO+8jRfzAapycxvVXGwIAAACAvXkKd7Jo8oJRyKCV8z4HSBGAGAGIEYAYAYgRgBgBiBGAGAGIEYAYAYi9hDvlmoNpFU+AGAGIEYAYAYgRgBgBiBGA2OYA4tLoIR6f8Tjbn+94vAWkFW/yMR69/W/43zEkND9hyER13nklels3lDmERFoJwN0ExXOe4p/jDUWHMu8Bi7Z8Bnhu6mvAIvdEmvexSzVZN68HG7OwyZYAOkfZn4BFqQP4CngsuwzAelvXh4Ra6YZurQQDMWUAo8qc7DL9cHWOx4clHICNzt1EANWu584vvta1abqhYgQgRgBiBHAjY/1jKmcvyArodhcncwBLN38cgrv7TRO0wkpf/8j5TlSw6UBzzTk4VftF7Vy8byrv9dMEiRHAus5R1r3+QQDrOkfZ/OsfO/gQLmL9Y6mCTQcwsJIHYnsI4MqE6x9LlcoagDEnM5UzgKKbApXMASzd/HEIuibBqZpuqDW6J7WmcUCTe1KrmQvyNm+1zEkxEharKYDOUbaaPamtBpBsTiZnr6+oCtnO96QWUSHb8Z7UoipkDe1JZUnS6dHXSzdUjADECECMAMQIQIwAxAhA7O7fDVVpZfzBEyBGAGIEIEYAYgQgRgBiBCBGAGIEIEYAYgQAAAAAAJn9AjpOl/3q5WBoAAAAAElFTkSuQmCC");
+      --ico-filter: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAFRSURBVHgB7dtdTQNREAXgKQqQUAnFQSUgAQmgoBLAARIqoRKQUByAg+Fu6EN/dl9nEvi+5L70cW73JDsnGwEAAAAAAAAAAAAA8Besrn/IIf6vl9Vq9RaFXMCl73EexiV8RpG74Nz9OO9RyAXc2o4QeA7qjIEf8tLXOPdBjTHs9Wno5/ZBnSl28tZjUGcmio6iqNAY9mbmKXgN6oyB72YuYRvUOUWPKOoy/eNFUbNp4KKo0RQ5oqjZQhTtgjoLUbQJaixE0UdQZyGKbEwrjYHvry5gWt6tgxqnKLremB6COmPgT6KoWc6XN+ugRs6XN6KoUs6XN6KoUuqRe6Ueud9CFG2DOqlH7pV65H6pR+6XypteqUful3rkXqlH7pd65H6pR+61EEU2ppVSj9wv9ci9Uo/cL5U3/fJyYzrFkveCSvlb3hzTN2cAAAAAAAAAANT4AT+EeWGI/MfUAAAAAElFTkSuQmCC");
+      --ico-wah: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAP2SURBVHgB7Z3tcdswDIaRXv/XmSAYod2g2aTdJCN2gyITOJkgFXttIsH6ICQCBEU8d/mBO1hS+BogCFEyQBAEQdArd1CZtwGoyN0AVOQT1OcF6lHz3H8JASrjQYCu8RgB3+6UGI79yM5FUBmPAnyBjogUVBkPAhCzEfS4MDsmYWNCgGBKbynoAdbPbU5EQGU+Q2GG1s4VbnOtV56G632SfKB070gjAo5ObAh6IByDoDAeBfAMQWE0BCDwi7vUaBEBP4T9GQQ9uADfN67tJ/MnKIyFAK1MyHPwsrV4erUQAIX+ngRTXzlrCPDM7K0BtRQAmU0b/hehv5hIQesgswkKY1EFIfih5S9DHsPKEt+m/M74zARQQnqedO3sIw9QmEhB6yCzX6EwxQUYyuc9Akw+M3zTiotW4pgz/9thtLqhNDYyQtfivrCookmpVOK/Fy0B+IDeQ3sgs1V6XFYCFJ+8dnB0UdWUAMTsrfzL/RHKIxUAmU2ggFUEtFgJ8Xmo6RTkoR0hPabJDgotAXg/CDf8awhAG/4o9N+F1U35FlMQMvvUk7BFBBzN6U0LgBv+NVKQtAoq3oZIRBW0jPq9gISKADv6QR4jYOKv0QdKaE7CNDY2+kE8vKsKMNMHUhn8RGxNnMck/STMIgDWJ2KLFITMphVfk0VYoicBJCCzT5GCWqqE+JqBQAnLCLgIfBHKw8//KvBtMgKk/SBt+KBeV3yR2VEFGdNXFTQscrJ9D4DsnM8rvt1VQd6QzBeHiBQ0DzL7Ci0i2YmmuQtNultPct1H0Y4AvuHKw+6IVWY2cKnl/4SpABWRLAKR2QSKaAtAzMZCvlIkZeWpIwDBP92mIC8NOfXnwsZ4SkGaAiCzacXXbBWcsI6AFjqip0pBFrcac5BsSUGB72F6rYJeBL4EikQVdItplPZSBUmOdZ4IELaZNecLyaDi2NhoWx/Gohuq/gBeKaz7QAlzAaDOi1lzB7YLAXDBjzL99pA7sMhsAmUsBCBme16MmV9bjQi4HPTbQ+4tRtMKKOEpBVkKsHSL0fy9opGCppwyBeXW95bd0K5T0OzA7nzJxy5WHrZAZhMoUyMFIQTveKqCbnxLrJqFq1tkNoEyxd8dPYOkI5p8xwN2VdiWky2Adh8ooR4Bc/nWYz+o1jVZbU0kZi/1g9R7L7CcVswroISVAHxg7zP9LEFmExhgMQckaPj7OrLTivMXdxrS1SN0Rq0I8LgaRmYTGBACfGC6Ies/tQRA8M+pBJC+0LsGyGwCAyIFfYDMjhRUmVMJQMyOFPQPq3XATQRoP3tVALUnI8eY/aB9AwM+ofQPti1h+ZgqQTsQGBHPCc9TsycVBEEQdMIfM1aXemxcJZMAAAAASUVORK5CYII=");
+      --ico-utility: url("data:image/png;base64,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");
+      --ico-gate: url("data:image/png;base64,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");
+      --ico-doubler: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAHgSURBVHgB7dyBbYMwEIVhpxO0G3SzdoVu0E3JBskGrqtSKTESYOD8zvj/JNRGspDFE75LhAkBAAAAACqLMX6m45aOIR0fAXWNF/7fLXTmEsR+r/rj50sSOvISIEUAYgQgRgBiBCB2eADWfT3fGxaU9vUxc/T5vTu85y7t663He0cNEFsMoPU1t/X511jTrccPJfOvbXH99LamW4+vjRogRgCZ0pphXmMqrNFN14y4s8ZwB0y9Pvx/Nxj/hACmvtJxDX8X89tg/BO6IDHuALE1ATyua9fQnrbnP7ZZw9hqrWnLrLuU0vFF86+NX0PFqAFiFgFYr7mt1yRbFWqG6zW9FE/GiVEDxAhAjADECECMAMQ8BEBfr3S2vh4AAAAAuhfZU6YVW98f0DqejMMsAhAjADECECMAMXkA3vr07r43WPfpG568M51P7vRPxnl/+poaIMb7gk42H3fvC9pwftP55E6/Q8bb+Bw1QOz07wvybs1G7SH9eR8/3tMd9rYwniWowJolaNe7EDBvTQC73oWAeXRBlcfn6ILE2Ce8n6/5RGf7hDec33Q+OX4N3Tl+L2qAGHvEpvrasxaN94jVXtNL8WScGDVAjADECECMAMQIQKyHAHgXhVLtvh4AAAAAlvwAvaBa3kI/2boAAAAASUVORK5CYII=");
+      --ico-pitch: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAANqSURBVHgB7Z2NcdpAEEZXmRTgDqIOTAdxKog7CB3EHZhUAB0wqcAlQCqIOzg6wKngy2oOJRp8h9Aft3vaN7ODNYMttE/sCd2xJjIMwzAMwzAMwzAMwzAMwzCMySnIGASAO374F0VR7Dv8On1sewLvAM1t3sFspXEqHvjhnmPBUf1cJ77JuPnBGTQzqqRzrDmOuAIam8l3IJRT4nfoCI3N5DsQRt/E981P6xgwF+AH0xXH9yue/sax5zhwvJ6232gKhhrWAB9WyfG75eTecTxzfKJbkrsAPqQFh2tJ/GdKRc4C+HCWiF/duKSJb7zILAWckh+juuy8IwnkKAD+SidE9W74RpLITQD8gHuMlJwFSSMnAafku0jyS5JILgKqmq4u+RUZCdgEkn8UWXaa5CCAX/YTwjySdLQLgK/7IZ5JAxkIcIHkb0kLmgXwy10Fku8gedA9R6uAC6WnJE0oFuACyddR95toFBArPaQRbQKyKT01CgU45FB6ajQJQPgDl87SU6NFAOI32krSjCIB20Dy16QdDQLg53XflR5ImdUaghIBLiBA1sxWX6QLQHhu94VyQbIAZDDwdl4ZJ/FdcMamKIpDvQF/53NJiWhbTd66lFpBwpscOL7UAuAnXJKWo7kJWPLx/qw34D+ElZSQNgEfKB8OZ8l/osTJHwWJg3Bk4P1KOSJNQOSyU88UY1ckCcjhsrMzwgRsZnX2V0gRgPBEi8v67K8QJOAlICCP+z2XkCAA4YFX90TLtaQWgPii2nuaAwIEzG/gbZJSAOY68DZJLMAFBFzzPd58SCUAOS2uGkIKAchtcdUQEglwgeTrXVw1hFsLsNJzxi0FWOkJcCsBiN/pnGfpqbmhgC2s9LznFgIQrvvzLj01UwvgP/kYSf68PnDFmFIA/JrOUN8G/Ytqx2IqAbjct0H/otqxmEIANDbNSMXYAhBvEXa05AcYUwAutwiT37chBWMIgJ/V2iBO/nO7fRkqAL49mIskXl6LMGn0FYD2DrQO0nv1SKCLAPirmxXaW/9WTVJLMnp9QePh9GPdur1anVDS/3bubWw4fhRFMU2r39zAeOwgoRGqNjCcnSV+AOhHdXWztsS3M0b7+rp1+558K/dXru+/yLiKzv/v5HRW/+E4Vo82mBqGYRiGYRiGYRiGYajhLxz9GEr6rN+bAAAAAElFTkSuQmCC");
+      --ico-modulation: url("data:image/png;base64,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");
+      --ico-delay: url("data:image/png;base64,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");
+      --ico-reverb: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAASXSURBVHgB7ZyNUeMwEIXXN1dASkgJoQPogKsArgLoADqADqCDlBA6yHXgdABXwZ407E2I0a8tadfxfjOeQGJ7n96LE8WSDaAoiqIoiqIoytLoQBCIuDEPO7Os4EzoDKHXf4AQztH8FEQcAcb8tXnYwxmaL/4IIPMX984XgTXfLD0GgBlgZO5mpz/F/DkEYCQ+z05/wPyHWTSAMPIecW5vIKNp5TH/hV6fRQBG2r2jDb1o/WT+3mc+rSO3AYSRtfGYvxarP2D+drCezAYQ6P/43NDrYgPYOkTbQFaD9cQGEDD/7ss68vQbHa8p5tO6kgNwHcEPg3Vk6Ud3N613mU/ry2oA4WnHk2M9OfrR3U3r8fPXr28bOQ0gPO3Ye9aVoX+M+bSdjAYc9fi6m3KP4LHm07b8DThqucxtB7v+KebT9rwNOOqwPZ73gRz7/yayHZ9+j/nvqebTPtgDQH938zphWx79ptatx/xN5n54GnCs7ztV8pC4fXv9pcynfbVvwGn97Vjzafu2+tF9XsQSPVw9+2vbgNParo/QbeY+2ukn898dom9gJE0bcFrX13nIGqlrpj9g/h1MoFkDTmtee8xfQyZN9GNgQAUm0qQBp/V83c01jKC6/prm0/6bBYATupuBfdbTX9t8qtEkAPR3N2V+hLYwn+q0CmBXoy1V9Lcyn2pVDwDdp5ZfoADF9WPCOG5Jijfg+/5d3c09FCJX/0+IszPL8Bfth1kOhY+AtevJAkGv4Djrzj4O23Iwyy9gIjo3tMa7UBAHs1x1XXeAQgz9is0NXXoAF8afP1CQ3ADETE9n4K20+WNI+Q4Y8vrl7wOUxX63PA+eu4VpfNByYZYnmBu53+pS6+H34cUdVCBX/5I/gkSgATCjATCjATCjATCjATCjATCjATCjATCjATCjATCjATCjATCjATAzZjxgUeDn3NBqd3IRFYCdseB4rod81gnrXJYcbxhL9phwbIxzLKbMPcxxxCrCLMaEjfm3cIbmQ8KQLftHEJlfZZJXQQ6R19eeba4gAmsAAfPt828wjr/mqP9w1LqEz0lm/7GzIqIGxaDvreEEtQOUmm+UO8icsV/fpU03UIEag/I48ZLc1CLFA8AKlzYl1CwaQBPzqVDRAALmF59pPahbLIBm5lOxYgFwmU+1iwSABS5Gzy1YJABseI2Bp/7kAALmZ18PnVN0cgDc5pOGSQGg+64pdc2nwpMCkGA+6RgdABa8E0A2UwKQYj5pGRWAx3zL6CspsxgbgCTzSU92AAHzq3WXXSKyAwiYz3a+JzcAbPxDMSQkK4CA+azne3ICQIYfil5yAsDIbYk5SQ0AGX+rOEkNABtfzppLSgDizCdR0QAC5he7/nYqsQDQfdMOXvNJWDCAkPmYea+dmoQCQGE9thMSAki6JzQ3vgBEm28JBYAZ94TmxhWAePMtvgA85vdY66zgRBwB9CjdfIsrgLmZb0H3XXBlm29xiHycm/mWhABEdJe/gXF66eZbIgGwmb/0m3VYXruu+w1MLH1yLqv5liUfAfZOKVeuOUQtWeoRIMJ8RVEURVEURVGWyT834sUucqJlLgAAAABJRU5ErkJggg==");
+      --ico-capture: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAKnSURBVHgB7d3rUdtAFIbhY00KoATogFQQ0kE6iEwDQAWxKzCpIKaDdBBTAaYC3EHcgfKdQcw4IyRsrXYtye8zs+ObfoA+3fZ4tTYDAJyqiQ1cIeXTbdk25eNa7dlfTyaTtfXUmAJo8hbIb7XHPgcyOEU7L2q/1C4NYYpwT2rf7Ug+WUJ5np9lWXarf/hGL8+sAzqcDPowmiyA6+trX/E/1DpZ8WMRPQBt9VfaSH3FXxkqogXghxut+Jme3hgAAKg4lVJEDEtdZEwtUGZoK/dyhgUigDDBIRBAOA9hZi216oiVZYWF9cDQa0EH7wHq4Z57TcfQiYMD0Ab3xzqqZOLAQ5C2/ry86tsYAAAIQi0orpmuGudNCxBAXD4e6UIhbOsWoBQRl/eXGoe8NPYDvNdrCPVN7Wfdh7UBaOVfatd5sp4bbS0oyzJGMyRQGwDjeNJ4NwA//Ojh3AAAQDSUItLK1W152H2DUkRalVuiCCCtynfpBJBWZQ+o1IKm0+mLDagTNsZaEENOEiKAI+McAADAkVALSmulbsvX3Te4CkqrMj6IANKqTBRFAGlVAqjUgoYyHujN6GpBy+XSU9oakqg7BDGpXSLvBqAru5UBAICoqAXFt1ZX5XPdh/SE47tv+pA9IC6fuf2iaQH2gLhmHy3w4WQd5QSsPlaol6MlRj9fkGpDW+3lc0MUex2CFIKfSFaGzu19DmAvAAAA/yn6ofU0npQiwt2rL3hnLRFAmOAZ1KkFtdfJ9PWd/YiPakYL/UG3ltjJzR1dR+WKuyJgFvFT1ekhSCHMFYKfkBjYtafOzwFeuFMI/hXcxgAAQC16wq/f9PlPnT80TTGMGkU7f9UWal/syJL+ovYR+Zbt9zys7PVOxUfriTEFsN1p653HZ61wbjgBAPTOP4PuDryvLBadAAAAAElFTkSuQmCC");
+      --ico-cab: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAEBSURBVHgB7dxBDoIwFADRarz/lZWtCxNUYJr0vTWsJj+E0jIGAACwmtveC5+btxs3g7/dBykBYgLEBIgJEBMgJkBMgJgAMQFiAsQeg0P8ulZmAmICxASICRATICZATIDYae8BviHvYwJiAsQEiFkL+uCqZ5gJiAkQEyAmQEyAmAAxAWICxASICRATICZATICYADEBYgLEBIgJEBMgJkBMgJgAMQFi0+zX/HYfztnXX8UExASICRATICZATICYADEBYgLEBIgJEFvmjNis55RNQEyAmAAxAWICxASICRCb5j1g1f8JmYCYADEBYgLEBIgJEBMgJkBMgJgAMQEAAAAu9gIvuByxioXuVwAAAABJRU5ErkJggg==");
+      --ico-amp: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAGCSURBVHgB7dzxTQIxFAfgQhxAN3AEmQhXcBJHYAVGcAPdADeADc6SnIacDQXK+czxfUlDcj3+eb+869EmpAQAAAAAAAAAAEzNrHSx67rH/LHK4ymP+0SrdR4vs9nsczjxK4C++O9J4a9tl8diGMK8cONrUvwx7Gu6Gl4sdUCXGMsud8DD4YVqAPkLxXWC09TqOU+EEkAwAQQTQDABBBNAMAEEE0AwAQQTQDABBBNAMAEEE0AwAQQTQKO83f+cxzaPTR7L1KobSBzVF/7btjB/tJ46oN3h+fkutdIB5+kfQZv+MbQszB+tpzPhkTkT/ucEEEwAwe5qN1iIx6UDggkgmACCVdcAvwPa1NZQHRBMAMEEEOzsAGr7363zN6+2e9fV97+b5qemVs9LHkG1/e/W+dt2QgfU9r+b5qemVk/nASOr1dNbUDABBBNAsNJe0P7N5OdNpbRwcD2lDvhIjGU9vODPOv7OaX/W0d+wSIW0uMi+8G+pUHwAAAAAAAAAAGCavgAlrXo9etdPqAAAAABJRU5ErkJggg==");
+      --ico-tuner: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAACxLAAAsSwGlPZapAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAL2SURBVHgB7dzxcdowFAbwRyfICN6gGcEjsEGzQToCG5AN6Aa9TkA3IJ1A6QSwwat0EncgZJ8bIz49+H53/kM5Lsj+5CdjYUSIiIiIiOjRLKQS9c7eyBNDbtX/L0JQDACMAYAxADAGAMYAwBgAGAMAYwBgDACMAYAxADAGAMYAwBgAGAMAYwBgDACMAYAxADAGAMYAwBgAGAMAYwBgDACMAYAxADAGAMYAwBgAGAMAqxnA4bShqk9iRKGvB6nkZgF4ZgLwuqz9IZXUDOA9a/diR5e1TZ4Bf7P2s9jRZ+0/Yo2vo0s958SI0Nes70uxJkxkfttnO9JL43wfn/VStfmrWglaLBahbubzwDdp32vW/pX2xZ4w4gujqZNGhb4V+muv/Jwq1NOtNMr3baNG561BejkZB9+lMb5Pr4V+vsg9CKM+27EwOTdzWZpKT37BsJN7MbCDThuYD1LfXGGAdHJPQtm5PMOxIWi85HRqoERehd+xVWFn94gd1ljz94X+rOSeDYQQbG5xNqSSsx3ow0oewUgIxyCuPkFr/EyyGXnflTwSjXPCfuSAOL+tNV7Ghlo9+XaAxtsgYaS/pP/hRt4HUgKbkA7STnG2em9XO5+hcaQ6vR2n1m8x1KCx3PzUOkKp2Wpjd2Sb/CE9jfW+T9tXicuZnUxf1jykLdyNDQtDv8PW4l1NU79keCoM6dO2tV9lPOLXUsAYABgDAGMAYAwAjAGAMQAwBgDGAMAYABgDAGMAYAwAzFwAGtd214W/b5SrW/VoXOddT1h4Wauh59FMSAf/f9aOdwzhinTayL84E4Tm0/J39p3GueApvWap5UX9XmgeLXxnv1ReNJapPIQ3oXn0svYvR16bP5HT/AMWzS9kh6N42h5bfE9nxn7q61tg8XPA4NWNxYfpLATwkbUHv7hbKE/vQvOEiXTGJLwRmkfLj7q642hPB77X8mVoJzRf4SyYgpeg16K8FYGXQphyJrzx4Fek8dbEDz0/I1w68L0QEREZ8Q9W2GhbabzG3QAAAABJRU5ErkJggg==");
+      --ico-unknown: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAKCSURBVHgB7dzRbdswEIDhc9EB3A20QTyCNsgI7QbJBs0GzQYewe0E9gbJBvIGyQbXU8UHlSIVxBbJMPo/gAjoABJwpGiad7YIAAAAAAAAAAAA8JltpBKq2tifW2s7a621rWu+s2vP1v5sNpuT4HIW+B/Wjnq5ztp3wftY0FoXvKV0OjxFmGNB2lp71HQeBGH9DLX2NBO8o7U7a7t+oCLX6P/XL1t7BuEdXPC7SMD2esHy4a65j1zzXjDQYdnpAkHqX9vJldwT8RK4fiv4F6DHyKzfykJ0WJr8Qehk7dzs9B0kAR12Vr51b1F1uvR0S878wP1+efd7krWKzP5GEtLh/cbXyhrpdMu5lwx0+sn6p6yNDlvErLN/dG//yTtKIV+knFuvf7KDs7PkcfL6jRRScgBar/9bMgkMdCOFlByAxus/C/LR6YeiZFvPwL0nOyEppOQT8F/AbVl4lXz8441iT99XKcQCXjIbd+P1z4J8Ap8/yJjlouHzoEaQh07PnpIc/CHAgv0QmP03gvQiwc9y9rRqGk/yd6z9iWk8z/xC8BOzAN9rOA/cv3Z1nhkROl9X1DHzE9L5uqI+FZntvGl13ljv7wTp6HxdUSNISzPUFSFCM9YVIUAz1xVhRAvUFWFEp/U9nO3kogXripZUMid8rdbr56wrWkzNA+AXdmWrK1pSzQPQeH3qinLSgnVFS6rmi9q+PuLjfuEyl4vVvAR9CgxAYQxAYQwAAAAAAAAAgDhXEXEcZcUO1ANl4oIf++JFI0jLzfaYYr/7c6nq8qh+Ltjzaqnhb1KRGhMycz/qUV1lRI0DMFf/U2VxVlV4E/4A3CAcRoE/EnwAAAAAAAB8dH8B3R53Pb/HNPIAAAAASUVORK5CYII=");
+    }
+
+    /* Quad Cortex style: category-colored tile with the block icon inside. */
+    .fx-icon {
+      position: relative;
+      width: 28px;
+      height: 28px;
+      flex: none;
+      border-radius: 7px;
+      background: var(--block-color);
+    }
+    .fx-icon::after {
+      content: "";
+      position: absolute;
+      inset: 4px;
+      background: var(--icon-ink, #000);
+      -webkit-mask: var(--icon) center / contain no-repeat;
+      mask: var(--icon) center / contain no-repeat;
+    }
+
+    .tuner-btn { display: inline-flex; align-items: center; gap: 10px; }
+    .tuner-btn .fx-icon { --block-color: #45F862; width: 22px; height: 22px; border-radius: 5px; }
+    .tuner-btn .fx-icon::after { inset: 3px; }
+
+    .tuner-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: grid;
+      place-items: center;
+      background: rgba(0, 0, 0, 0.88);
+      --tune-color: #9a9a9a;
+    }
+    .tuner-overlay[hidden] { display: none; }
+    .tuner-overlay.in-tune { --tune-color: #45F862; }
+    .tuner-overlay.flat, .tuner-overlay.sharp { --tune-color: #FF7000; }
+
+    .tuner-panel {
+      width: min(560px, calc(100vw - 32px));
+      padding: 22px 24px 24px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #0d0d0d;
+      display: grid;
+      gap: 18px;
+    }
+    .tuner-head { display: flex; align-items: center; justify-content: space-between; }
+    .tuner-note {
+      text-align: center;
+      font-size: 120px;
+      line-height: 1;
+      font-weight: 700;
+      color: var(--tune-color);
+      transition: color 0.12s;
+      min-height: 120px;
+    }
+    .tuner-scale {
+      position: relative;
+      height: 46px;
+      border-radius: 8px;
+      background:
+        linear-gradient(90deg, transparent calc(50% - 1px), #45F862 calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+        repeating-linear-gradient(90deg, #3a3a3a 0 1px, transparent 1px 10%),
+        #151515;
+      border: 1px solid #2a2a2a;
+    }
+    .tuner-needle {
+      position: absolute;
+      top: -6px;
+      bottom: -6px;
+      left: 50%;
+      width: 4px;
+      margin-left: -2px;
+      border-radius: 2px;
+      background: var(--tune-color);
+      box-shadow: 0 0 14px var(--tune-color);
+      transition: left 0.08s linear, background 0.12s;
+    }
+    .tuner-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; letter-spacing: 0.1em; }
+    .tuner-cents { text-align: center; color: #d8d8d8; font-size: 15px; min-height: 20px; font-variant-numeric: tabular-nums; }
+    .tuner-controls { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .tuner-controls label { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .tuner-controls input[type=number] {
+      width: 86px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #3a3a3a;
+      background: #141414;
+      color: #fff;
+      font-size: 15px;
+    }
+    #tunerMute { --block-color: #45F862; }
+
+    @media (max-width: 1050px) {
+      .toolbar { grid-template-columns: 1fr; }
+      .top-row { grid-template-columns: 1fr; }
+      .chain { grid-template-columns: repeat(5, 230px); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Nano Cortex Web Editor</h1>
+    <div class="status">
+      <span id="dot" class="dot"></span><span id="status">Disconnected</span>
+      <button id="refreshBtn" class="btn-small">Refresh</button>
+      <button id="disconnectBtn" class="btn-small btn-disconnect">Disconnect</button>
+      <button id="copyLogBtn" class="btn-small">Log kopieren</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="unsupported" class="unsupported">Web Bluetooth is not available in this browser. Use Chrome or Edge on desktop.</div>
+
+    <section class="toolbar">
+      <div class="toolbar-actions">
+        <button id="connectBtn" class="primary">Connect</button>
+        <button id="saveBtn" class="primary">Save</button>
+        <button id="renameBtn">Rename</button>
+        <button id="tunerBtn" class="tuner-btn"><span class="fx-icon" style="--icon: var(--ico-tuner)"></span>Tuner</button>
+      </div>
+      <div class="preset-bar">
+        <button id="presetPrev" class="preset-step" title="Previous preset" aria-label="Previous preset">&#8249;</button>
+        <div class="preset-field"><label for="presetSelect">Preset</label><select id="presetSelect"></select></div>
+        <button id="presetNext" class="preset-step" title="Next preset" aria-label="Next preset">&#8250;</button>
+      </div>
+    </section>
+
+    <section class="top-row">
+
+    <div class="top-card" style="--block-color: var(--white);">
+      <div class="block-head">
+        <div class="block-title"><span class="fx-icon" style="--icon: var(--ico-capture)"></span><h2>Capture</h2></div>
+        <div id="captureToggle" class="toggle-switch on">
+          <div class="toggle-dot"></div>
+        </div>
+      </div>
+
+      <select id="captureSelect"></select>
+
+      <div id="currentCaptureText" class="current-item">
+        Current: —
+      </div>
+
+      <div style="margin-top:12px;">
+        <label style="
+          display:block;
+          font-size:11px;
+          letter-spacing:0.12em;
+          text-transform:uppercase;
+          color:#bdbdbd;
+          margin-bottom:6px;
+        ">
+          Capture Volume
+        </label>
+
+        <input
+          id="captureVolumeSlider"
+          type="range"
+          min="-24"
+          max="12"
+          step="0.1"
+          value="0"
+          style="width:100%;"
+        >
+
+        <div
+          id="captureVolumeValue"
+          style="
+            margin-top:4px;
+            font-size:12px;
+            color:#d0d0d0;
+            text-align:right;
+          "
+        >
+          0.0 dB
+        </div>
+      </div>
+
+      <div id="captureExtraParams" class="mini-param-grid"></div>
+    </div>
+
+  <div class="top-card" style="--block-color: var(--white);">
+    <div class="block-head">
+      <div class="block-title"><span class="fx-icon" style="--icon: var(--ico-cab)"></span><h2>Cab / IR</h2></div>
+      <div id="cabIRToggle" class="toggle-switch on">
+        <div class="toggle-dot"></div>
+      </div>
+    </div>
+
+    <select id="irSelect"></select>
+
+    <div id="currentIRText" class="current-item">
+      Current: —
+    </div>
+
+    <div id="irExtraParams" class="mini-param-grid"></div>
+  </div>
+
+  <div class="top-card" style="--block-color: var(--white);">
+    <div class="gate-layout">
+
+      <div>
+        <div class="block-title" style="margin-bottom:10px"><span class="fx-icon" style="--icon: var(--ico-gate)"></span><h2>Gate</h2></div>
+        <div id="gateToggle" class="toggle-switch">
+          <div class="toggle-dot"></div>
+        </div>
+      </div>
+
+      <div id="gateParams"></div>
+
+    </div>
+  </div>
+
+</section>
+
+    <section class="amp-panel" style="--block-color: var(--white);">
+      <div class="block-title" style="margin-bottom:14px"><span class="fx-icon" style="--icon: var(--ico-amp)"></span><h2>Amp</h2></div>
+      <div id="ampKnobs" style="display:grid; grid-template-columns: repeat(5, minmax(90px, 1fr)); gap: 14px;"></div>
+    </section>
+
+    <div class="chain-title">FX Blocks</div>
+    <section class="chain" id="chain"></section>
+
+    <footer class="beta-footer">
+      <strong>Nano Cortex Web Editor</strong><br>
+      Tested firmware: 2.2.1 &nbsp;|&nbsp; Unofficial community project &nbsp;|&nbsp; Not affiliated with Neural DSP<br>
+      Use at your own risk. Back up presets in Cortex Cloud before testing.
+    </footer>
+  </main>
+
+  <div id="tunerOverlay" class="tuner-overlay" hidden>
+    <div class="tuner-panel" role="dialog" aria-label="Tuner">
+      <div class="tuner-head">
+        <div class="block-title" style="--block-color: #45F862;"><span class="fx-icon" style="--icon: var(--ico-tuner)"></span><h2 style="margin:0;font-size:13px;letter-spacing:.14em;color:#ececec;text-transform:uppercase;">Tuner</h2></div>
+        <button id="tunerClose" class="btn-small">Close</button>
+      </div>
+      <div id="tunerNote" class="tuner-note">–</div>
+      <div>
+        <div class="tuner-scale"><div id="tunerNeedle" class="tuner-needle"></div></div>
+        <div class="tuner-labels"><span>-50</span><span>-25</span><span>0</span><span>+25</span><span>+50</span></div>
+      </div>
+      <div id="tunerCents" class="tuner-cents"></div>
+      <div class="tuner-controls">
+        <label>Reference A4 <input id="tunerFreq" type="number" min="400" max="480" step="1" value="440"> Hz</label>
+        <label>Mute output <div id="tunerMute" class="toggle-switch on"><div class="toggle-dot"></div></div></label>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    const NANO_NAME_PREFIX = 'Neural DSP Nano Cortex';
+    const SERVICE_UUIDS = ['0000a002-0000-1000-8000-00805f9b34fb', '0000a003-0000-1000-8000-00805f9b34fb'];
+    const C304_UUID = '0000c304-0000-1000-8000-00805f9b34fb';
+    const C305_UUID = '0000c305-0000-1000-8000-00805f9b34fb';
+
+    const FX_BLOCK_KEYS = ['pre1', 'pre2', 'post1', 'post2', 'post3'];
+
+    const DELAY_SYNC_NOTES_FULL = [
+      '1/64T', '1/64', '1/32T', '1/64D', '1/32',
+      '1/16T', '1/32D', '1/16', '1/8T', '1/16D',
+      '1/8', '1/4T', '1/8D', '1/4', '1/2T',
+      '1/4D', '1/2', '1/1T', '1/2D', '1/1', '1/1D'
+    ];
+
+    const SYNC_NOTES_1_16_UP = [
+      '1/16', '1/8T', '1/16D', '1/8', '1/4T', '1/8D',
+      '1/4', '1/2T', '1/4D', '1/2', '1/1T', '1/2D', '1/1', '1/1D'
+    ];
+
+    const SYNC_NOTES_1_8_UP = [
+      '1/8', '1/4T', '1/8D', '1/4', '1/2T', '1/4D',
+      '1/2', '1/1T', '1/2D', '1/1', '1/1D'
+    ];
+
+    const SYNC_NOTES_1_32_UP = [
+      '1/32', '1/16T', '1/32D', '1/16', '1/8T', '1/16D',
+      '1/8', '1/4T', '1/8D', '1/4', '1/2T', '1/4D',
+      '1/2', '1/1T', '1/2D', '1/1', '1/1D'
+    ];
+
+    function rangeMeta(min, max, step, unit = '', decimals = null) {
+      return { kind: 'range', min, max, step, unit, decimals };
+    }
+
+    function enumMeta(options) {
+      return { kind: 'enum', options };
+    }
+
+    function knob(name, index, value = null, meta = null) {
+      const resolvedMeta = meta || inferParamMeta('', name);
+      return {
+        type: resolvedMeta.kind === 'enum' ? 'switch' : 'knob',
+        name,
+        index,
+        value: value === null ? defaultParamValue(resolvedMeta) : value,
+        meta: resolvedMeta,
+        labels: resolvedMeta.kind === 'enum' ? resolvedMeta.options : null
+      };
+    }
+
+    function makeParams(labels, modelName = '') {
+      return labels.map((label, index) => {
+        const parsed = parseParamLabel(label);
+        const meta = inferParamMeta(modelName, parsed.name, parsed.options);
+        return {
+          type: meta.kind === 'enum' ? 'switch' : 'knob',
+          name: parsed.name,
+          index,
+          labels: meta.kind === 'enum' ? meta.options : null,
+          value: defaultParamValue(meta),
+          meta
+        };
+      });
+    }
+
+    function parseParamLabel(label) {
+      const open = label.indexOf('(');
+      const close = label.lastIndexOf(')');
+
+      if (open > -1 && close > open) {
+        const name = label.slice(0, open).trim();
+        const optionText = label.slice(open + 1, close).replace(/two way switch/ig, '').replace(/three way switch/ig, '').trim();
+        const options = optionText.split('/').map(x => x.trim()).filter(Boolean);
+        return { name, options };
+      }
+
+      return { name: label.trim(), options: null };
+    }
+
+    function device(name, category, labels, modelID, displayOrder = null) {
+      return { name, category, id: modelID || null, params: makeParams(labels, name), displayOrder };
+    }
+
+    function defaultParamValue(meta) {
+      if (!meta) return 5;
+
+      if (meta.kind === 'enum') {
+        const offIndex = meta.options.findIndex(x => String(x).toLowerCase() === 'off');
+        return offIndex >= 0 ? offIndex : 0;
+      }
+
+      if (typeof meta.defaultValue === 'number') return meta.defaultValue;
+      if (meta.min !== undefined && meta.max !== undefined) return roundToStep((meta.min + meta.max) / 2, meta.step || 0.1);
+
+      return 5;
+    }
+
+    function inferParamMeta(modelName, paramName, inlineOptions = null) {
+      const p = normaliseName(paramName);
+      const m = normaliseName(modelName);
+
+      if (inlineOptions && inlineOptions.length > 1) return enumMeta(correctOptions(inlineOptions));
+
+      if (p.includes('sync note')) return enumMeta(syncNoteOptionsForModel(modelName, paramName));
+      if (p === 'sync' || p === 'sync l' || p === 'sync r') return enumMeta(['Off', 'On']);
+
+      const enumOverride = enumParamOptions(modelName, paramName);
+      if (enumOverride) return enumMeta(enumOverride);
+
+      const exact = exactRangeMeta(modelName, paramName);
+      if (exact) return exact;
+
+      if (p.includes('gain') || p.includes('level') || p.includes('tone') || p.includes('volume') ||
+          p.includes('drive') || p.includes('distortion') || p.includes('filter') ||
+          p.includes('fuzz') || p.includes('bass') || p.includes('treble') ||
+          p.includes('blend') || p.includes('sensitivity') || p === 'sens' ||
+          p.includes('color') || p.includes('intensity')) {
+        return rangeMeta(0, 10, 0.1, '', 1);
+      }
+
+      return rangeMeta(0, 10, 0.1, '', 1);
+    }
+
+    function correctOptions(options) {
+      const corrected = options.map(option => {
+        const s = String(option).trim();
+        if (s === '1,32D') return '1/32D';
+        if (s === 'CHO2') return 'CHO2';
+        return s;
+      });
+
+      // Every binary (On/Off)-style switch we've verified against real captured
+      // packets (Sync, Ping Pong, Vibe, LFO Active) has turned out to put "Off"
+      // at the real device's index 0 and "On" at index 1 -- the opposite of how
+      // these labels are written inline in the model definitions below (e.g.
+      // 'Ping Pong (On/Off)' parses to ['On','Off']). Until each individual
+      // inline-labeled switch gets its own confirmed packet, this normalizes
+      // them all to the pattern that's held consistently so far.
+      if (corrected.length === 2 && corrected[0].toLowerCase() === 'on' && corrected[1].toLowerCase() === 'off') {
+        return [corrected[1], corrected[0]];
+      }
+
+      return corrected;
+    }
+
+    function enumParamOptions(modelName, paramName) {
+      const p = normaliseName(paramName);
+      const m = normaliseName(modelName);
+
+      if (p === 'ratio' && m.includes('legendary 87')) return ['4', '8', '12', '20', 'All'];
+      if (p === 'ratio' && m.includes('solid state comp')) return ['2', '4', '10'];
+      if (p === 'dyn mode') return ['Off', 'Duck', 'Gate'];
+      if (p === 'tap preset') return ['1', '2', '3', '4', '4 Alt', '5', '5 Alt', '6', '6 Alt'];
+      if (p === 'size') return ['Small', 'Medium', 'Large'];
+      if (p === 'mode' && m.includes('chief dc2w')) return ['1', '2', '3', '4', '1+2', '1+3', '1+4', '2+3', '2+4', '3+4'];
+      if (p === 'mode type') return ['S', 'SDD-320'];
+      if (p === 'type' && m.includes('chief ce2w')) return ['CE2-C', 'CE1-C', 'CE1-V'];
+      if (p === 'mode' && m.includes('dream chorus')) return ['CHO1', 'CHO2'];
+      if (p === 'type' && m.includes('mx phase')) return ['90', '45'];
+      if (p === 'mode' && m.includes('mx phase')) return ['Block', 'Script'];
+      if (p === 'vibe') return ['Off', 'On'];
+      if (p === 'waveform') return ['Sine', 'Triangle', 'Square', 'Saw Up', 'Saw Dn'];
+      if (p === 'lfo active') return ['Off', 'On'];
+      if (p === 'feedback mode') return ['Reverse', 'Flip'];
+      if (p === 'trigger mode') return ['Off', 'Full', '1/2'];
+      if (p === 'filter cutoff') return ['Low', 'A', 'B', 'High'];
+      if (p === 'filter type') return ['Lowpass', 'Bandpass', 'Highpass'];
+      if (p.includes('slope')) return ['Flat', '-6', '-12', '-18', '-24', '-30', '-36', '-42', '-48'];
+      if (p.endsWith(' type') && (p.startsWith('1 ') || p.startsWith('2 ') || p.startsWith('3 '))) return ['Peak', 'Hi Pass', 'Lo Pass', 'Hi Shelf', 'Lo Shelf'];
+
+      return null;
+    }
+
+    function syncNoteOptionsForModel(modelName, paramName) {
+      const m = normaliseName(modelName);
+
+      if (m.includes('analog delay')) return SYNC_NOTES_1_16_UP;
+      if (m.includes('circular delay') || m.includes('digital delay') || m.includes('dual delay') || m.includes('dual reverse') || m.includes('tape delay')) return DELAY_SYNC_NOTES_FULL;
+
+      if (m.includes('chorus 229t')) return SYNC_NOTES_1_8_UP;
+      if (m.includes('mx phase') || m.includes('tremolo')) return SYNC_NOTES_1_32_UP;
+
+      return SYNC_NOTES_1_16_UP;
+    }
+
+    function exactRangeMeta(modelName, paramName) {
+      const p = normaliseName(paramName);
+      const m = normaliseName(modelName);
+
+      if (p === 'wah') return rangeMeta(0, 1, 0.01, '', 2);
+      if (p === 'lp/bp/hp') return rangeMeta(-1, 1, 0.01, '', 2);
+      if (p === 'noise reduction') return rangeMeta(0, 100, 0.1, '%', 1);
+
+      if (p.includes('65hz') || p.includes('125hz') || p.includes('250hz') || p.includes('500hz') ||
+          p.includes('1khz') || p.includes('2khz') || p.includes('4khz') || p.includes('8khz') ||
+          p.includes('16khz')) return rangeMeta(-12, 12, 0.1, 'dB', 1);
+
+      if (p.includes('gain') && (p.startsWith('1 ') || p.startsWith('2 ') || p.startsWith('3 '))) return rangeMeta(-12, 12, 0.1, 'dB', 1);
+      if (p.includes('output')) return rangeMeta(-12, 12, 0.1, 'dB', 1);
+      if (m.includes('graphic 9') && p === 'output') return rangeMeta(-20, 20, 0.1, 'dB', 1);
+      if (m.includes('low-high cut') && p === 'output') return rangeMeta(-20, 20, 0.1, 'dB', 1);
+      if (m.includes('parametric 3') && p === 'output') return rangeMeta(-20, 20, 0.1, 'dB', 1);
+
+      if (p.includes('threshold') && m.includes('utility gate')) return rangeMeta(-90, 0, 0.1, 'dB', 1);
+      if (p === 'range' && m.includes('utility gate')) return rangeMeta(-90, -6, 0.1, 'dB', 1);
+
+      if (p.includes('threshold') && (m.includes('digital delay') || m.includes('dual delay') || m.includes('dual reverse'))) return rangeMeta(-65, -10, 0.1, 'dB', 1);
+      if (p.includes('threshold')) return rangeMeta(-60, 12, 0.1, 'dB', 1);
+
+      if (p === 'input' && m.includes('legendary')) return rangeMeta(-48, 0, 0.1, 'dB', 1);
+      if (p === 'makeup') return rangeMeta(-48, 48, 0.01, 'dB', 2);
+
+      if (p === 'dry level' || p === 'fx level') return rangeMeta(-40, 12, 0.1, 'dB', 1);
+      if (p === 'spread') return rangeMeta(3, 60, 0.01, 'ms', 2);
+
+      if (p.includes('mix') || p.includes('depth') || p.includes('width') || p === 'boost' ||
+          p === 'duty cycle' || p === 'smoothing' || p === 'overlap' || p === 'x-feedback' ||
+          p === 'feedback depth' || p === 'feedback l' || p === 'feedback r' || p === 'feedback' ||
+          p === 'diffusion' || p === 'mod depth' || p === 'level') return rangeMeta(0, 100, 0.1, '%', 1);
+
+      if (p === 'drive' && (m.includes('chief dc2w') || m.includes('tape delay'))) return rangeMeta(0, 100, 1, '%', 0);
+      if (p === 'mod rate') return rangeMeta(0.1, 10, 0.1, 'Hz', 1);
+      if (p === 'rate' && m.includes('tremolo')) return rangeMeta(0.1, 20, 0.1, 'Hz', 1);
+      if ((p === 'rate' || p === 'speed') && m.includes('chorus 229t')) return rangeMeta(0.2, 3, 0.01, 'Hz', 2);
+      if (p === 'mod speed') return rangeMeta(0.1, 5, 0.01, 'Hz', 2);
+      if (p === 'rate' || p === 'speed') return rangeMeta(0, 100, 1, '%', 0);
+
+      if (p.includes('attack') && m.includes('legendary')) return rangeMeta(0.02, 0.8, 0.01, 'ms', 2);
+      if (p.includes('release') && m.includes('legendary')) return rangeMeta(0.06, 1.1, 0.01, 's', 2);
+      if (p.includes('attack') && m.includes('solid state')) return rangeMeta(0.1, 30, 0.01, 'ms', 2);
+      if (p.includes('release') && m.includes('solid state')) return rangeMeta(0.01, 1.2, 0.01, 's', 2);
+      if (p.includes('attack') && (m.includes('opto') || m.includes('vca'))) return rangeMeta(1, 250, 0.01, 'ms', 2);
+      if (p.includes('release') && (m.includes('opto') || m.includes('vca'))) return rangeMeta(50, 1200, 1, 'ms', 0);
+
+      if (p.includes('attack') && (m.includes('digital delay') || m.includes('dual delay') || m.includes('dual reverse'))) return rangeMeta(1, 2000, 1, 'ms', 0);
+      if (p.includes('release') && (m.includes('digital delay') || m.includes('dual delay') || m.includes('dual reverse'))) return rangeMeta(1, 2000, 1, 'ms', 0);
+      if (p.includes('fade in') || p.includes('fade out')) return rangeMeta(1, 5000, 1, 'ms', 0);
+
+      if (p.includes('attack')) return rangeMeta(1, 1000, 1, 'ms', 0);
+      if (p.includes('hold')) return rangeMeta(1, 2000, 1, 'ms', 0);
+      if (p.includes('release')) return rangeMeta(2, 5000, 1, 'ms', 0);
+
+      if (p.includes('q') && (p.startsWith('1 ') || p.startsWith('2 ') || p.startsWith('3 '))) return rangeMeta(0.1, 10, 0.1, '', 1);
+      if (p === 'reso') return rangeMeta(1, 10, 0.01, '', 2);
+      if (p === 'ratio' && (m.includes('opto') || m.includes('vca'))) return rangeMeta(2, m.includes('opto') ? 20 : 10, 0.01, '', 2);
+      if (p === 'knee') return rangeMeta(1, 20, 0.01, 'dB', 2);
+
+      if (p === 'semitones') return rangeMeta(-12, 12, 1, 'Sem', 0);
+      if (p === 'pitch fine') return rangeMeta(-100, 100, 1, 'Cent', 0);
+
+      if (p.includes('freq')) return rangeMeta(20, 20000, 1, 'Hz', 0);
+      if (p === 'hpf' || p === 'high pass') {
+        if (m.includes('tape delay')) return rangeMeta(80, 800, 1, 'Hz', 0);
+        if (m.includes('transpose')) return rangeMeta(20, 2000, 1, 'Hz', 0);
+        return rangeMeta(20, 800, 1, 'Hz', 0);
+      }
+      if (p === 'lpf' || p === 'low pass') {
+        if (m.includes('tape delay')) return rangeMeta(800, 6000, 1, 'Hz', 0);
+        if (m.includes('transpose')) return rangeMeta(200, 19900, 1, 'Hz', 0);
+        if (m.includes('ambience') || m.includes('hall') || m.includes('mind hall') || m.includes('modulated') || m.includes('room')) return rangeMeta(800, 12000, 1, 'Hz', 0);
+        if (m.includes('cave')) return rangeMeta(800, 8000, 1, 'Hz', 0);
+        return rangeMeta(1000, 16000, 1, 'Hz', 0);
+      }
+
+      if (p === 'delay time' || p === 'delay time l' || p === 'delay time r') {
+        if (m.includes('analog delay')) return rangeMeta(200, 1100, 0.1, 'ms', 1);
+        if (m.includes('circular delay')) return rangeMeta(27, 2000, 0.01, 'ms', 2);
+        if (m.includes('dual reverse')) return rangeMeta(20, 4000, 1, 'ms', 0);
+        return rangeMeta(7, 6000, 1, 'ms', 0);
+      }
+
+      if (p === 'pre delay') {
+        if (m.includes('ambience')) return rangeMeta(0, 100, 0.1, 'ms', 1);
+        if (m.includes('hall') || m.includes('room')) return rangeMeta(1, 100, 0.1, 'ms', 1);
+        return rangeMeta(1, 200, 0.1, 'ms', 1);
+      }
+
+      if (p === 'decay') {
+        if (m.includes('cave')) return rangeMeta(5, 20, 0.01, 's', 2);
+        if (m.includes('hall') || m.includes('modulated')) return rangeMeta(1, 10, 0.01, 's', 2);
+        if (m.includes('room')) return rangeMeta(0.1, 2, 0.01, 's', 2);
+        if (m.includes('mind hall')) return rangeMeta(0, 100, 0.1, '%', 1);
+      }
+
+      if (p === 'damping') return rangeMeta(0, 100, 0.1, '%', 1);
+      if (p === 'dyn depth') return rangeMeta(0, 60, 0.1, 'dB', 1);
+      if (p === 'trig threshold') return rangeMeta(-40, 0, 0.1, 'dB', 1);
+
+      return null;
+    }
+
+    function normaliseName(value) {
+      return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    const deviceModels = {
+      overdrive: [
+        device('Chief BD2', 'Overdrive', ['Gain', 'Tone', 'Volume'], [0x12]),
+        device('Chief OD1', 'Overdrive', ['Gain', 'Level'], [0x0D]),
+        device('Exotic', 'Overdrive', ['Gain', 'Bass', 'Treble', 'Volume'], [0x06]),
+        device('Exotic Bass Z Boost', 'Overdrive', ['Gain', 'Bass', 'Treble', 'Volume'], [0xBF, 0x17]),
+        device('Exotic Z Boost', 'Overdrive', ['Gain', 'Bass', 'Treble', 'Volume'], [0x17]),
+        device('Facial Fuzz', 'Overdrive', ['Fuzz', 'Volume', 'Pickup (HB/Single)', 'Pickup Level'], [0x16]),
+        device('Green 808', 'Overdrive', ['Overdrive', 'Tone', 'Level'], [0x1B]),
+        device('Microtubes B3K', 'Overdrive', ['Drive', 'Growl (On/Off)', 'Midboost (On/Off)', 'Tone', 'Level', 'Blend'], [0xB8, 0x17]),
+        device('OD250', 'Overdrive', ['Gain', 'Volume'], [0x03]),
+        device('Obsessive Drive', 'Overdrive', ['Drive', 'Peak (LP/HP)', 'Tone', 'Volume'], [0x02]),
+        device('Rodent Drive', 'Overdrive', ['Distortion', 'Filter', 'Volume'], [0x04])
+      ],
+      utility: [
+        device('Adaptive Gate', 'Utility', ['Noise Reduction'], [0x81, 0x7D]),
+        device('Graphic 9', 'Utility', ['65Hz', '125Hz', '250Hz', '500hz', '1kHz', '2kHz', '4kHz', '8kHz', '16kHz', 'HPF', 'LPF', 'Output'], [0xA5, 0x1F]),
+        device('Low-High Cut', 'Utility', ['HPF Slope', 'HPF Freq', 'LPF Slope', 'LPF Freq', 'Output'], [0xA3, 0x1F]),
+        device('Parametric 3', 'Utility', ['1 Gain', '1 Freq', '1 Q', '1 Type (Peak/Hi Pass/Lo Pass/Hi Shelf/Lo Shelf)', '1 Active (On/Off)', '2 Gain', '2 Freq', '2 Q', '2 Type (Peak/Hi Pass/Lo Pass/Hi Shelf/Lo Shelf)', '2 Active (On/Off)', '3 Gain', '3 Freq', '3 Q', '3 Type (Peak/Hi Pass/Lo Pass/Hi Shelf/Lo Shelf)', '3 Active (On/Off)', 'Output'], [0xA1, 0x1F]),
+        device('Utility Gate', 'Utility', ['Threshold', 'Attack', 'Hold', 'Release', 'Range'], [0x82, 0x7D]),
+        device('Volume', 'Utility', ['Level', 'Curve (Linear/Log)'], [0x86, 0x7D])
+      ],
+      wahFilter: [
+        device('Bass Wah', 'Wah/Filter', ['Wah'], [0xB4, 0x46]),
+        device('Bubba Wah', 'Wah/Filter', ['Wah'], [0xB2, 0x46]),
+        device('Crying Clyde Wah', 'Wah/Filter', ['Wah'], [0xB6, 0x46]),
+        device('Crying Wah', 'Wah/Filter', ['Wah'], [0xB5, 0x46]),
+        device('Envelope Filter', 'Wah/Filter', ['Sens', 'Attack', 'Decay', 'LP/BP/HP', 'Level', 'Freq', 'Freq Depth', 'Reso', 'Mix'], [0xC6, 0xBB, 0x01]),
+        device('Love Meat', 'Wah/Filter', ['Sensitivity', 'Attack', 'Decay', 'Color', 'Intensity', 'Blend', 'Trig Detection (Down/Up)', 'Trigger Mode', 'Filter Cutoff', 'Filter Type', 'Level'], [0xC1, 0xBB, 0x01])
+      ],
+      compressor: [
+        device('Legendary 87 (M)', 'Compressor', ['Input', 'Ratio', 'Attack', 'Release', 'Makeup', 'Mix'], [0x89, 0x27]),
+        device('Opto Comp (M)', 'Compressor', ['Threshold', 'Ratio', 'Attack', 'Release', 'Makeup', 'Mix'], [0x8F, 0x27]),
+        device('Solid State Comp (M)', 'Compressor', ['Threshold', 'Ratio', 'Attack', 'Release', 'Makeup', 'Mix'], [0x8C, 0x27]),
+        device('VCA Comp (M)', 'Compressor', ['Threshold', 'Ratio', 'Attack', 'Release', 'Makeup', 'Mix'], [0x8D, 0x27])
+      ],
+      pitch: [
+        device('Transpose', 'Pitch', ['Mix', 'Semitones', 'Pitch Fine', 'High Pass', 'Low Pass'], [0xD1, 0x8C, 0x01])
+      ],
+      postUtilityEQ: [
+        device('Doubler', 'Utility/EQ', ['Spread', 'Dry Level', 'FX Level'], [0x8B, 0x7D]),
+        device('Graphic 9', 'Utility/EQ', ['65Hz', '125Hz', '250Hz', '500hz', '1kHz', '2kHz', '4kHz', '8kHz', '16kHz', 'HPF', 'LPF', 'Output'], [0xA5, 0x1F]),
+        device('Low-High Cut', 'Utility/EQ', ['HPF Slope', 'HPF Freq', 'LPF Slope', 'LPF Freq', 'Output'], [0xA3, 0x1F]),
+        device('Parametric 3', 'Utility/EQ', ['1 Gain', '1 Freq', '1 Q', '1 Type (Peak/Hi Pass/Lo Pass/Hi Shelf/Lo Shelf)', '1 Active (On/Off)', '2 Gain', '2 Freq', '2 Q', '2 Type (Peak/Hi Pass/Lo Pass/Hi Shelf/Lo Shelf)', '2 Active (On/Off)', '3 Gain', '3 Freq', '3 Q', '3 Type (Peak/Hi Pass/Lo Pass/Hi Shelf/Lo Shelf)', '3 Active (On/Off)', 'Output'], [0xA1, 0x1F]),
+        device('Legendary 87 (ST)', 'Utility/EQ', ['Input', 'Ratio', 'Attack', 'Release', 'Makeup', 'Mix'], [0x94, 0x27]),
+        device('Opto Comp (ST)', 'Utility/EQ', ['Threshold', 'Ratio', 'Attack', 'Release', 'Makeup', 'Mix'], [0x97, 0x27]),
+        device('Solid State Comp (ST)', 'Utility/EQ', ['Threshold', 'Ratio', 'Attack', 'Release', 'Makeup', 'Mix'], [0x95, 0x27]),
+        device('VCA Comp (ST)', 'Utility/EQ', ['Threshold', 'Ratio', 'Attack', 'Release', 'Makeup', 'Mix'], [0x96, 0x27])
+      ],
+      modulation: [
+        device('Chief CE2W (ST)', 'Modulation', ['Mix', 'Rate', 'Depth', 'Type', 'Width', 'Output', 'Sync (On/Off)', 'Sync Note'], [0xF0, 0x36], [0, 1, 6, 7, 2, 3, 4, 5]),
+        device('Chief DC2W (ST)', 'Modulation', ['Mix', 'Mode', 'Mode Type', 'Drive', 'Output'], [0xF3, 0x36]),
+        device('Chorus 229T', 'Modulation', ['Mix', 'Rate', 'Depth', 'Width', 'Output', 'Sync (On/Off)', 'Sync Note'], [0xEF, 0x36], [0, 1, 5, 6, 2, 3, 4]),
+        device('Dream Chorus', 'Modulation', ['Mix', 'Speed', 'Depth', 'Mode', 'Output', 'Sync (On/Off)', 'Sync Note'], [0xEE, 0x36], [0, 1, 5, 6, 2, 3, 4]),
+        device('MX Flanger', 'Modulation', ['Mix', 'Manual', 'Width', 'Speed', 'Regen', 'Output', 'Sync (On/Off)', 'Sync Note'], [0xED, 0x36], [0, 1, 2, 3, 6, 7, 4, 5]),
+        device('MX Phase 95', 'Modulation', ['Mix', 'Speed', 'Type', 'Mode', 'Output', 'Sync (On/Off)', 'Sync Note'], [0xF4, 0x36], [0, 1, 5, 6, 2, 3, 4]),
+        device('MX Vibe', 'Modulation', ['Mix', 'Vibe', 'Speed', 'Level', 'Depth', 'Output', 'Sync (On/Off)', 'Sync Note'], [0xF5, 0x36], [0, 1, 2, 6, 7, 3, 4, 5]),
+        device('Tremolo', 'Modulation', ['Rate', 'Depth', 'Waveform', 'Duty Cycle', 'Width', 'Smoothing', 'LFO Active', 'Fade In', 'Fade Out', 'Boost', 'Sync (On/Off)', 'Sync Note'], [0xDC, 0x36], [0, 10, 11, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+      ],
+      delay: [
+        device('Analog Delay', 'Delay', ['Mix', 'Feedback', 'High Pass', 'Low Pass', 'Ping Pong (On/Off)', 'Delay Time', 'Mod Rate', 'Mod Depth', 'Width', 'Drive', 'Sync (On/Off)', 'Sync Note'], [0xFA, 0x2E], [0, 1, 2, 3, 4, 10, 11, 5, 6, 7, 8, 9]),
+        device('Circular Delay', 'Delay', ['Mix', 'Tap Preset', 'Delay Time', 'Feedback', 'Diffusion', 'High Pass', 'Low Pass', 'Mod Rate', 'Mod Depth', 'Vintage Mode (On/Off)', 'Sync (On/Off)', 'Sync Note'], [0xFF, 0x2E], [0, 1, 10, 11, 2, 3, 4, 5, 6, 7, 8, 9]),
+        device('Digital Delay (ST)', 'Delay', ['Mix', 'Feedback', 'High Pass', 'Low Pass', 'Ping Pong (On/Off)', 'Delay Time', 'Mod Rate', 'Mod Depth', 'Width', 'Dyn Depth', 'Dyn Mode', 'Threshold', 'Attack', 'Release', 'Knee', 'Feedback Depth', 'Sync (On/Off)', 'Sync Note'], [0xFB, 0x2E], [0, 1, 2, 3, 4, 16, 17, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]),
+        device('Dual Delay', 'Delay', ['Mix', 'Delay Time L', 'Feedback L', 'X-Feedback', 'Delay Time R', 'Feedback R', 'High Pass', 'Low Pass', 'Mod Rate', 'Mod Depth', 'Link FBack (On/Off)', 'Dyn Depth', 'Dyn Mode', 'Threshold', 'Attack', 'Release', 'Knee', 'Feedback Depth', 'Sync L (On/Off)', 'Sync Note L', 'Sync R (On/Off)', 'Sync Note R'], [0xFC, 0x2E], [0, 18, 19, 1, 2, 3, 20, 21, 4, 5, 10, 11, 12, 13, 14, 15, 16, 17, 6, 7, 8, 9]),
+        device('Dual Reverse Delay', 'Delay', ['Mix', 'Delay Time L', 'Feedback L', 'X-Feedback', 'Feedback Mode', 'Delay Time R', 'Feedback R', 'Overlap', 'Trig Threshold', 'Dyn Depth', 'Dyn Mode', 'Threshold', 'Attack', 'Release', 'Knee', 'Feedback Depth', 'High Pass', 'Low Pass', 'Link FBack (On/Off)', 'Sync (On/Off)', 'Sync Note L', 'Sync Note R'], [0xFE, 0x2E], [0, 19, 20, 1, 2, 3, 4, 21, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]),
+        device('Tape Delay', 'Delay', ['Mix', 'Feedback', 'High Pass', 'Low Pass', 'Drive', 'Delay Time', 'Wow', 'Flutter', 'Ping Pong (On/Off)', 'Sync (On/Off)', 'Sync Note'], [0xF4, 0x2E], [0, 1, 2, 3, 4, 9, 10, 5, 6, 7, 8])
+      ],
+      reverb: [
+        device('Ambience', 'Reverb', ['Mix', 'Size', 'Pre Delay', 'High Pass', 'Low Pass'], [0xC8, 0x3E]),
+        device('Cave', 'Reverb', ['Mix', 'Decay', 'Pre Delay', 'Damping', 'High Pass', 'Low Pass'], [0xC9, 0x3E]),
+        device('Hall', 'Reverb', ['Mix', 'Decay', 'Pre Delay', 'High Pass', 'Low Pass'], [0xC3, 0x3E]),
+        device('Mind Hall', 'Reverb', ['Mix', 'Decay', 'Pre Delay', 'High Pass', 'Low Pass', 'Damping'], [0xCB, 0x3E]),
+        device('Modulated', 'Reverb', ['Mix', 'Decay', 'Pre Delay', 'Mod Speed', 'Mod Depth', 'High Pass', 'Low Pass'], [0xC7, 0x3E]),
+        device('Room', 'Reverb', ['Mix', 'Decay', 'Pre Delay', 'High Pass', 'Low Pass'], [0xC0, 0x3E])
+]
+    };
+
+    const preFxModels = [].concat(deviceModels.overdrive, deviceModels.utility, deviceModels.wahFilter, deviceModels.compressor, deviceModels.pitch);
+    const postFx1Models = [].concat(deviceModels.postUtilityEQ, deviceModels.modulation);
+    const postFx2Models = [].concat(deviceModels.postUtilityEQ.slice(1), deviceModels.delay);
+    const postFx3Models = [].concat(deviceModels.postUtilityEQ.slice(1), deviceModels.reverb);
+
+    const MODEL_IMAGES = {
+      'Circular Delay': 'img/Circular delay.png',
+      'Digital Delay (ST)': 'img/Digital Delay.png',
+      'Ambience': 'img/ambience reverb.png',
+      'Hall': 'img/Hall.png',
+      'Modulated': 'img/modulated reverb.png',
+      'Room': 'img/Room reverb.png',
+
+      'Bass Wah': 'img/Bass wah.png',
+      'Bass wah': 'img/Bass wah.png',
+      'modulated': 'img/modulated reverb.png',
+      'Cave': 'img/Cave delay.png',
+
+      'Tape Delay': 'img/Tape Delay.png',
+      'Circular delay': 'img/Circular delay.png',
+      'Analoge Delay': 'img/Analog Delay.png',
+      'Analog Delay': 'img/Analog Delay.png',
+      'Digital Delay': 'img/Digital Delay.png',
+      'Dual Delay': 'img/Dual Delay.png',
+      'Dual Reverse Delay': 'img/Reverse delay.png',
+      'Cave Reverb': 'img/Cave delay.png',
+      'modulated reverb': 'img/modulated reverb.png',
+      'Bass wah': 'img/Bass wah.png',
+      'Bubba Wah': 'img/Budda Wah.png',
+      'Crying Clyde Wah': 'img/Crying Clyde wah.png',
+      'Crying Wah': 'img/cry Baby.png',
+      'Chief BD 2': 'img/BD 2.png',
+      'Chief BD2': 'img/BD 2.png',
+      'Chief OD1': 'img/OD-1.png',
+      'Exotic': 'img/Xotic-BB.png',
+      'Exotic Z Boost': 'img/Xotic RC Booster.png',
+      'Facial Fuzz': 'img/Dunlop Fuzzface.png',
+      'Green 808': 'img/808.png',
+      'Obsessive Drive': 'img/OCD.png',
+      'OD250': 'img/DOD Pre.png',
+      'Rodent Drive': 'img/ProRat.png',
+      'Exotic Bass Z Boost': 'img/Xotic Bass.png',
+      'Microtubes B3K': 'img/Darkglass.png',
+      'Mind Hall': 'img/Lexicon224.png',
+      'Legendary 87 (M)': 'img/UA Comp.png',
+      'Chief CE2W (ST)': 'img/Boos CE2w.png',
+      'Chief DC2W (ST)': 'img/Boss DC-2w.png',
+      'Chorus 229T': 'img/TC 2290.png',
+      'Dream Chorus (ST)': 'img/TC Dream.png',
+      'Dream Chorus': 'img/TC Dream.png',
+      'MX Flanger': 'img/MXR M11r.png',
+      'MX Phase 95': 'img/mxr phase 95.png',
+      'MX Vibes': 'img/MXR UniVibe.png',
+      'MX Vibe': 'img/MXR UniVibe.png',
+      'Love Meat': 'img/Lovetone Meatball.png'
+    };
+
+    const state = {
+      device: null,
+      server: null,
+      c304: null,
+      c305: null,
+      presetSlots: { a1: -1, b1: -1, a2: -1, b2: -1 },
+      library: { factory: [], user: [], irFactory: [], irUser: [], loaded: false, requested: false },
+      tuner: { open: false, baseFrequency: 440, muted: true },
+      libraryBytes: [],
+      libraryTimer: null,
+      presetDirty: false,
+      connected: false,
+      selectedPreset: 1,
+      presetNames: new Map(),
+      captureNames: new Map(),
+      irNames: new Map(),
+      currentCapture: { name: '', id: '', inBank: true },
+      capture: {
+        on: true,
+        selectedSlot: null,
+        lastActiveSlot: 1
+      },
+      currentIR: { shortName: '', fullName: '', inBank: true },
+      cabIR: {
+        on: true,
+        selectedSlot: null,
+        lastActiveSlot: 1,
+        mic: 'Dynamic 57',
+        position: 1,
+        levelDb: 0,
+        highPassHz: 20,
+        lowPassHz: 20000,
+        paramsLoaded: false
+      },
+      feBytes: [],
+      feTimer: null,
+      stateMode: 'idle',
+      stateBytes: [],
+      stateTimer: null,
+      paramRefreshQueue: [],
+      pendingParamBlock: null,
+      pendingParamTimer: null,
+      protocol: { feSyncComplete: false, lastStateSync: 0, metadataLoaded: false, skipFXModelApply: false, presetLoad: false },
+      presetLoadTimer: null,
+      blocks: {
+        pre1: { title: 'Pre FX 1', key: 'pre1', color: 'var(--cyan)', model: 'None', on: false, models: [{ name: 'None', category: 'Bypass', params: [] }].concat(preFxModels), params: [] },
+        pre2: { title: 'Pre FX 2', key: 'pre2', color: 'var(--green)', model: 'None', on: false, models: [{ name: 'None', category: 'Bypass', params: [] }].concat(preFxModels), params: [] },
+        post1: { title: 'Post FX 1', key: 'post1', color: 'var(--purple)', model: 'None', on: false, models: [{ name: 'None', category: 'Bypass', params: [] }].concat(postFx1Models), params: [] },
+        post2: { title: 'Post FX 2', key: 'post2', color: 'var(--pink)', model: 'None', on: false, models: [{ name: 'None', category: 'Bypass', params: [] }].concat(postFx2Models), params: [] },
+        post3: { title: 'Post FX 3', key: 'post3', color: 'var(--red)', model: 'None', on: false, models: [{ name: 'None', category: 'Bypass', params: [] }].concat(postFx3Models), params: [] }
+      },
+      gate: { on: false, params: [knob('Reduction', 0, 50, rangeMeta(0, 100, 1, '%', 0))] },
+      amp: { gain: 64, level: 64, bass: 64, mid: 64, treble: 64 }
+    };
+
+    const blockSlotConfig = {
+      pre1:  { label: 'Pre FX 1',  modelSlot: 0x00, refreshSlot: 0x00, enableSlot: 0x04 },
+      pre2:  { label: 'Pre FX 2',  modelSlot: 0x01, refreshSlot: 0x01, enableSlot: 0x05 },
+      post1: { label: 'Post FX 1', modelSlot: 0x02, refreshSlot: 0x02, enableSlot: 0x06 },
+      post2: { label: 'Post FX 2', modelSlot: 0x03, refreshSlot: 0x03, enableSlot: 0x07 },
+      post3: { label: 'Post FX 3', modelSlot: 0x04, refreshSlot: 0x04, enableSlot: 0x08 }
+    };
+
+    const $ = id => document.getElementById(id);
+
+    const logLines = [];
+
+    function log(message) {
+      const line = new Date().toLocaleTimeString() + ' ' + message;
+      console.log(line);
+      logLines.push(line);
+      if (logLines.length > 5000) logLines.splice(0, logLines.length - 5000);
+    }
+
+    async function copyLog() {
+      const text = logLines.join(String.fromCharCode(10));
+      try {
+        await navigator.clipboard.writeText(text);
+        $('copyLogBtn').textContent = 'Kopiert (' + logLines.length + ' Zeilen)';
+      } catch (err) {
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'nano-log.txt';
+        a.click();
+        $('copyLogBtn').textContent = 'Log gespeichert';
+      }
+      setTimeout(() => { $('copyLogBtn').textContent = 'Log kopieren'; }, 2000);
+    }
+
+    function hex(bytes) { return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '); }
+    function printableASCII(bytes) { return Array.from(bytes).map(b => (b >= 32 && b <= 126) ? String.fromCharCode(b) : '.').join(''); }
+    function setStatus(text, connected = false) { $('status').textContent = text; $('dot').classList.toggle('connected', connected); }
+    function bytesFromHex(s) { return new Uint8Array(s.replaceAll(' ', '').match(/.{1,2}/g).map(h => parseInt(h, 16))); }
+
+    // BLE writes run strictly one at a time. Writes with a coalesceKey (knob/slider
+    // values) replace any not-yet-sent write with the same key, so fast knob turns
+    // never build up a backlog: the device always gets the latest value next.
+    const gattWriteQueue = [];
+    let gattWritePumpRunning = false;
+
+    function writeC304(label, payload, coalesceKey = null) {
+      return new Promise(resolve => {
+        if (coalesceKey) {
+          const pending = gattWriteQueue.find(job => job.key === coalesceKey);
+          if (pending) {
+            pending.label = label;
+            pending.payload = payload;
+            pending.waiters.push(resolve);
+            return;
+          }
+        }
+
+        gattWriteQueue.push({ key: coalesceKey, label, payload, waiters: [resolve] });
+        pumpGattWriteQueue();
+      });
+    }
+
+    async function pumpGattWriteQueue() {
+      if (gattWritePumpRunning) return;
+      gattWritePumpRunning = true;
+
+      while (gattWriteQueue.length > 0) {
+        const job = gattWriteQueue.shift();
+        try {
+          if (!state.c304) {
+            log('ERROR: not connected - C304 characteristic not available');
+          } else {
+            log('TX ' + job.label + ': ' + hex(job.payload));
+            await state.c304.writeValueWithResponse(job.payload);
+          }
+        } catch (err) {
+          log('ERROR: BLE write failed for "' + job.label + '": ' + err);
+        }
+        job.waiters.forEach(resolve => resolve());
+      }
+
+      gattWritePumpRunning = false;
+    }
+
+    async function connectAll() {
+      await connectNano();
+      if (state.connected) {
+        await syncMetadataAndState();
+      }
+    }
+
+    async function connectNano() {
+      try {
+        if (!navigator.bluetooth) throw new Error('Web Bluetooth is not available. Use Chrome or Edge.');
+        setStatus('Requesting device...');
+        log('Requesting Nano Cortex...');
+
+        const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: SERVICE_UUIDS });
+        state.device = device;
+        device.addEventListener('gattserverdisconnected', onDisconnected);
+
+        setStatus('Connecting...');
+        log('Selected device: ' + (device.name || '(unnamed)'));
+
+        const server = await device.gatt.connect();
+        state.server = server;
+        log('Connected. Searching A002/A003 for C304/C305...');
+
+        state.c304 = null;
+        state.c305 = null;
+
+        for (const serviceUUID of SERVICE_UUIDS) {
+          try {
+            const service = await server.getPrimaryService(serviceUUID);
+            log('Service accessible: ' + serviceUUID);
+            const characteristics = await service.getCharacteristics();
+            for (const ch of characteristics) {
+              const uuid = ch.uuid.toLowerCase();
+              log('Characteristic: ' + uuid);
+              if (uuid === C304_UUID) { state.c304 = ch; log('Found C304 write characteristic'); }
+              if (uuid === C305_UUID) { state.c305 = ch; log('Found C305 notify characteristic'); }
+            }
+          } catch (err) {
+            log('Service unavailable ' + serviceUUID + ': ' + err.message);
+          }
+        }
+
+        if (!state.c304 || !state.c305) throw new Error('C304/C305 not found under A002/A003');
+        await state.c305.startNotifications();
+        state.c305.addEventListener('characteristicvaluechanged', onC305);
+
+        state.connected = true;
+        setStatus('Connected', true);
+        log('C305 notifications enabled. Loading metadata and current preset state...');
+      } catch (err) {
+        log('Connect failed: ' + err.message);
+        setStatus('Disconnected');
+      }
+    }
+
+    async function syncMetadataAndState() {
+      log('Sync started');
+
+      state.stateMode = 'metadata';
+      state.feBytes = [];
+      state.stateBytes = [];
+      state.protocol.feSyncComplete = false;
+
+      if (state.protocol.metadataLoaded) {
+        log('Metadata already loaded for this session; skipping FE metadata request.');
+
+        renderPresetSelect();
+        beginPresetLoad();
+        return;
+      }
+
+      await writeC304('FE metadata request', bytesFromHex('06 C0 08 03 01 00 00 00'));
+
+      setTimeout(() => {
+        renderPresetSelect();
+        beginPresetLoad();
+      }, 2200);
+    }
+
+    // A preset change makes everything we know about the FX chain stale.
+    // Cancel in-flight parameter reads of the old preset and (debounced, so
+    // fast preset switching only loads the last one) re-read the full state.
+    function beginPresetLoad() {
+      state.protocol.presetLoad = true;
+      state.protocol.skipFXModelApply = false;
+      cancelFXParamRefresh();
+
+      if (state.presetLoadTimer) clearTimeout(state.presetLoadTimer);
+      state.presetLoadTimer = setTimeout(() => {
+        state.presetLoadTimer = null;
+        log('Lade neue Preset-Daten (Refresh)...');
+        requestCurrentPresetState();
+      }, 450);
+    }
+
+    async function requestCurrentPresetState() {
+      if (state.stateTimer) clearTimeout(state.stateTimer);
+      state.stateTimer = null;
+      state.stateMode = 'current';
+      state.stateBytes = [];
+      await writeC304('Current preset state request', bytesFromHex('0C C0 08 03 18 01 20 01 28 01 01 00 00 00'));
+    }
+
+    function onDisconnected() {
+      state.connected = false;
+      state.c304 = null;
+      state.c305 = null;
+      state.protocol.metadataLoaded = false;
+      state.protocol.feSyncComplete = false;
+      gattWriteQueue.length = 0;
+      setStatus('Disconnected');
+      log('Disconnected.');
+    }
+
+    function onC305(event) {
+      const data = new Uint8Array(event.target.value.buffer.slice(0));
+      if (frameType(data) === MSG.TunerMetering) { handleTunerMetering(data); return; }
+      log('RX C305: ' + hex(data.slice(0, 24)) + (data.length > 24 ? ' ...' : ''));
+
+      if (data.length === 0) return;
+
+      if (isCabIRParamRefreshResponse(data)) {
+        handleCabIRParamRefreshResponse(data);
+        return;
+      }
+
+      if (isFXParamRefreshResponse(data)) {
+        handleFXParamRefreshResponse(data);
+        return;
+      }
+
+      if (handleTypedMessage(data)) return;
+
+      if (isFEStreamPacket(data)) {
+        if (state.stateMode === 'library') {
+          for (const b of data.slice(2)) state.libraryBytes.push(b);
+          if (state.libraryTimer) clearTimeout(state.libraryTimer);
+          state.libraryTimer = setTimeout(() => parseLibraryContent(state.libraryBytes), 1500);
+        } else if (state.stateMode === 'current') {
+          appendCurrentStatePayload(data);
+          scheduleCurrentStateParse();
+        } else {
+          appendFEStreamPayload(data);
+          scheduleFEParse();
+        }
+        return;
+      }
+
+      parseCurrentPresetState(data);
+    }
+
+    function appendCurrentStatePayload(data) {
+      const payload = data.slice(2);
+      for (const b of payload) state.stateBytes.push(b);
+    }
+
+    function scheduleCurrentStateParse() {
+      if (state.stateTimer) clearTimeout(state.stateTimer);
+      state.stateTimer = setTimeout(parseBufferedCurrentState, 600);
+    }
+
+    function parseBufferedCurrentState() {
+      if (state.stateBytes.length === 0) return;
+
+      const bytes = state.stateBytes.slice();
+      log('CURRENT STATE FULL HEX: ' + hex(bytes));
+      log('CURRENT STATE FULL ASCII: ' + printableASCII(bytes));
+      const fields = parseProtoFields(bytes);
+
+      const captureSlot = fields[11] && fields[11][0] ? fields[11][0].value : 0;
+
+      state.capture.selectedSlot = captureSlot;
+      state.capture.on = captureSlot > 0;
+
+      if (captureSlot > 0) {
+        state.capture.lastActiveSlot = captureSlot;
+      }
+
+      state.cabIR.on = Boolean(fields[12] && fields[12][0]);
+
+      state.amp.gain = fields[3] && fields[3][0] ? fields[3][0].value : 0;
+      state.amp.level = fields[4] && fields[4][0] ? fields[4][0].value : 0;
+      state.amp.bass = fields[5] && fields[5][0] ? fields[5][0].value : 0;
+      state.amp.mid = fields[6] && fields[6][0] ? fields[6][0].value : 0;
+      state.amp.treble = fields[7] && fields[7][0] ? fields[7][0].value : 0;
+
+      state.gate.on = !(fields[54] && fields[54][0]);
+
+      // 9 bankSelector (1-5), 11 neuralCaptureSelector (position 1-5 in bank, 0 = bypass).
+      // The app derives the absolute capture slot from them: (bank-1)*5 + position.
+      const bank = Math.min(5, Math.max(1, fields[9] && fields[9][0] ? fields[9][0].value : 1));
+      state.capture.activeSlot = captureSlot > 0 ? (bank - 1) * 5 + captureSlot : null;
+
+      // StateResponseMessage: 13 currentPresetIndex, 14/15/38/39 footswitch slots,
+      // 41 currentPresetDirty. The device omits zero values.
+      const varintField = (n, fallback) => fields[n] && fields[n][0] && fields[n][0].wire === 0 ? fields[n][0].value : fallback;
+      state.selectedPreset = varintField(13, 0) + 1;
+      state.presetSlots = { a1: varintField(14, 0), b1: varintField(15, 0), a2: varintField(38, 0), b2: varintField(39, 0) };
+      state.presetDirty = Boolean(varintField(41, 0));
+      const tunerFreq = fields[46] && fields[46][0];
+      if (tunerFreq && tunerFreq.wire === 5) {
+        state.tuner.baseFrequency = Math.round(new DataView(Uint8Array.from(tunerFreq.raw).buffer).getFloat32(0, true)) || 440;
+      }
+      state.tuner.muted = Boolean(varintField(63, 0));
+      log('Current preset: ' + state.selectedPreset + (state.presetDirty ? ' (edited)' : ''));
+
+    if (fields[31] && fields[31][0]) {
+      log('FX enable field 31 raw: ' + hex(fields[31][0].raw));
+    }
+
+    if (fields[44] && fields[44][0]) {
+      const rawCaptureVolume = fields[44][0].value;
+      const captureDb = captureRawToDb(rawCaptureVolume);
+
+      state.captureVolumeDb = captureDb;
+      setCaptureVolumeUI(captureDb);
+
+      log('Current capture volume: ' + captureDb.toFixed(1) + ' dB raw=' + rawCaptureVolume);
+    }
+
+      const capture = fields[32] && fields[32][0] ? parseSelectedCaptureState(fields[32][0].raw) : null;
+      const ir = fields[33] && fields[33][0] ? parseSelectedIRState(fields[33][0].raw) : null;
+
+      if (capture) {
+
+          const resolvedName =
+              capture.name &&
+              !/^capture\s+\d+$/i.test(capture.name)
+                  ? capture.name
+                  : state.currentCapture.name;
+
+          state.currentCapture = {
+              name: resolvedName || '',
+              id: capture.id || '',
+              inBank: Array.from(state.captureNames.values()).some(
+                  name =>
+                      String(name).trim().toLowerCase() ===
+                      String(resolvedName || '').trim().toLowerCase()
+              )
+          };
+
+          const resolvedCaptureSlot = currentCaptureSlotIndex();
+          if (resolvedCaptureSlot) {
+            state.capture.selectedSlot = resolvedCaptureSlot;
+            state.capture.lastActiveSlot = resolvedCaptureSlot;
+          }
+      }
+
+      if (ir) {
+
+          const resolvedShortName =
+              ir.shortName &&
+              !/^ir\s+\d+$/i.test(ir.shortName)
+                  ? ir.shortName
+                  : state.currentIR.shortName;
+
+          state.currentIR = {
+              shortName: resolvedShortName || '',
+              fullName: ir.fullName || state.currentIR.fullName || '',
+              inBank: Array.from(state.irNames.values()).some(
+                  name =>
+                      String(name).trim().toLowerCase() ===
+                      String(resolvedShortName || '').trim().toLowerCase()
+              )
+          };
+
+        const parsedCabIR = parseCabIRNameParts(state.currentIR.fullName || state.currentIR.shortName);
+        if (!state.protocol.skipFXModelApply || state.protocol.presetLoad) {
+          if (parsedCabIR.mic) state.cabIR.mic = parsedCabIR.mic;
+          if (parsedCabIR.position !== null) state.cabIR.position = parsedCabIR.position;
+        }
+        state.cabIR.selectedSlot = currentIRSlotIndex();
+
+        if (state.cabIR.selectedSlot > 0) {
+          state.cabIR.lastActiveSlot = state.cabIR.selectedSlot;
+        }
+
+        log('Current cab/IR: ' + state.currentIR.shortName);
+      }
+
+      applyFXModelsFromCurrentState(fields);
+      applyFXEnabledStatesFromCurrentState(fields);
+
+      render();
+
+      log('CURRENT STATE BUFFER len=' + bytes.length);
+      log('CURRENT STATE capture=' + (state.currentCapture.name || 'unknown') + ', ir=' + (state.currentIR.shortName || 'unknown'));
+
+      state.stateBytes = [];
+      state.stateMode = 'idle';
+
+      state.protocol.presetLoad = false;
+
+      requestCabIRParamRefresh();
+      queueFXParamRefreshes();
+
+      if (!state.library.requested) {
+        state.library.requested = true;
+        setTimeout(requestLibraryContent, 2500);
+      }
+    }
+
+    const captureSlider = document.getElementById('captureVolumeSlider');
+    const captureValue  = document.getElementById('captureVolumeValue');
+
+    captureSlider.addEventListener('input', () => {
+      captureValue.textContent =
+        Number(captureSlider.value).toFixed(1) + ' dB';
+      setCaptureVolumeDb(captureSlider.value);
+    });
+
+    captureSlider.addEventListener('change', () => {
+      setCaptureVolumeDb(captureSlider.value);
+    });
+
+    
+    function applyFXModelsFromCurrentState(fields) {
+      // Capture/cab-IR/mic changes trigger a confirmatory state re-read,
+      // but can't actually change which FX model is loaded. The device may
+      // transiently report stale/wrong model IDs during these transitions
+      // (especially for Transpose and other 3-byte-ID models), so we skip
+      // model re-application entirely for those re-reads.
+      if (state.protocol.skipFXModelApply && !state.protocol.presetLoad) {
+        state.protocol.skipFXModelApply = false;
+        log('FX model apply skipped (confirmatory re-read)');
+        return;
+      }
+      state.protocol.skipFXModelApply = false;
+
+      // After a preset change the response is authoritative: a missing or
+      // unknown model field means the slot no longer holds the old model.
+      const isPresetLoad = state.protocol.presetLoad;
+
+      const fieldMap = {
+        pre1: 48,
+        pre2: 49,
+        post1: 50,
+        post2: 51,
+        post3: 52
+      };
+
+      Object.entries(fieldMap).forEach(([blockKey, fieldNumber]) => {
+        const entry = fields[fieldNumber] && fields[fieldNumber][0] ? fields[fieldNumber][0] : null;
+        const block = state.blocks[blockKey];
+
+        if (!entry || !block) {
+          // Field missing from current-state response — this can happen
+          // transiently during capture/cab-IR toggles. If we already have
+          // a valid model loaded, keep it rather than wiping to None.
+          if (!block || isPresetLoad || block.model === 'None') setBlockToNone(blockKey);
+          return;
+        }
+
+        const idHex = hex(entry.raw).replaceAll(' ', '');
+        log(block.title + ' raw current-state model field ' + fieldNumber + ': ' + idHex);
+
+        const model = findModelByCurrentStateID(block, idHex);
+
+        if (!model) {
+          log(block.title + ' current model ID not mapped: ' + idHex);
+          if (isPresetLoad || block.model === 'None') setBlockToNone(blockKey);
+          return;
+        }
+
+        // Only reset params if the model actually changed — otherwise we'd
+        // wipe the real current values (which haven't been read back yet)
+        // with defaults, causing a visible flash every time the state is
+        // re-read for unrelated reasons (cab mic change, capture toggle, etc.)
+        if (block.model !== model.name) {
+          block.model = model.name;
+          block.params = structuredClone(model.params || []);
+          log(block.title + ' model changed to: ' + model.name + ' [' + idHex + ']');
+        } else {
+          log(block.title + ' model unchanged: ' + model.name);
+        }
+      });
+    }
+
+    function applyFXEnabledStatesFromCurrentState(fields) {
+      const entry = fields[31] && fields[31][0] ? fields[31][0] : null;
+      if (!entry || !entry.raw || entry.raw.length < 5) {
+        log('FX bypass states not found.');
+        return;
+      }
+
+      const keys = ['pre1', 'pre2', 'post1', 'post2', 'post3'];
+
+      keys.forEach((key, index) => {
+        state.blocks[key].on = entry.raw[index] === 0;
+      });
+
+      log('FX bypass states: ' + keys.map((key, i) => key + '=' + (entry.raw[i] === 0 ? 'on' : 'off')).join(', '));
+    }
+
+
+
+    function currentIRSlotIndex() {
+      const current = String(state.currentIR.shortName || '').trim().toLowerCase();
+
+      for (let i = 1; i <= 5; i++) {
+        const name = String(state.irNames.get(i) || '').trim().toLowerCase();
+        if (name && current && name === current) return i;
+      }
+
+      const select = $('irSelect');
+      if (select && select.value !== 'library') return Number(select.value);
+
+      return null;
+    }
+
+    function currentCaptureSlotIndex() {
+      const current = String(state.currentCapture.name || '').trim().toLowerCase();
+      if (!current) return null;
+
+      for (let i = 1; i <= 25; i++) {
+        const name = String(state.captureNames.get(i) || '').trim().toLowerCase();
+        if (name && name === current) return i;
+      }
+
+      return null;
+    }
+
+    function parseCabIRNameParts(fullName) {
+      const parts = String(fullName || '').split('/').map(x => x.trim()).filter(Boolean);
+
+      if (parts.length >= 3) {
+        const posRaw = Number(parts[parts.length - 1]);
+        const mic = parts[parts.length - 2];
+
+        return {
+          baseName: parts.slice(0, parts.length - 2).join('/'),
+          mic,
+          position: Number.isFinite(posRaw) ? posRaw + 1 : null
+        };
+      }
+
+      return {
+        baseName: String(fullName || ''),
+        mic: null,
+        position: null
+      };
+    }
+
+    function cabIRLevelDbToNormalized(db) {
+      const value = clamp(Number(db), -96, 12);
+
+      if (value <= 0) {
+        return clamp(((value + 96) / 96) * 0.66212219, 0, 0.66212219);
+      }
+
+      return clamp(0.66212219 + (value / 12) * (1 - 0.66212219), 0, 1);
+    }
+
+    function cabIRLevelNormalizedToDb(normalized) {
+      const n = clamp(Number(normalized), 0, 1);
+
+      if (n <= 0.66212219) {
+        return (n / 0.66212219) * 96 - 96;
+      }
+
+      return ((n - 0.66212219) / (1 - 0.66212219)) * 12;
+    }
+
+    function cabIRRangeToNormalized(value, min, max) {
+      return clamp((Number(value) - min) / (max - min), 0, 1);
+    }
+
+    function cabIRNormalizedToRange(normalized, min, max, step) {
+      return roundToStep(min + clamp(Number(normalized), 0, 1) * (max - min), step || 1);
+    }
+
+    async function selectCaptureSlot(slotNumber) {
+      const slot = Number(slotNumber);
+      if (!Number.isFinite(slot) || slot < 0 || slot > 25) return;
+
+      state.capture.selectedSlot = slot;
+      state.capture.on = slot !== 0;
+
+      if (slot > 0) {
+        state.capture.lastActiveSlot = slot;
+      }
+
+      await writeC304(
+        slot === 0 ? 'Capture bypass' : 'Capture slot select ' + slot,
+        new Uint8Array([0x08, 0xC0, 0x18, 0x01, 0x20, slot, 0x1C, 0x00, 0x00, 0x00])
+      );
+
+      renderCaptureIR();
+      state.protocol.skipFXModelApply = true;
+      setTimeout(requestCurrentPresetState, 300);
+    }
+
+    async function selectCabIRSlot(slotNumber) {
+      const slot = Number(slotNumber);
+      if (!Number.isFinite(slot) || slot < 0 || slot > 5) return;
+
+      state.cabIR.selectedSlot = slot;
+      state.cabIR.on = slot !== 0;
+
+      if (slot > 0) {
+        state.cabIR.lastActiveSlot = slot;
+      }
+
+      await writeC304(
+        slot === 0 ? 'Cab/IR bypass' : 'Cab/IR slot select ' + slot,
+        new Uint8Array([0x08, 0xC0, 0x18, 0x03, 0x20, slot, 0x1C, 0x00, 0x00, 0x00])
+      );
+
+      renderCaptureIR();
+      state.protocol.skipFXModelApply = true;
+      setTimeout(requestCurrentPresetState, 300);
+
+      if (slot > 0) {
+        // Wait for the current-state request above to round-trip and finish
+        // parsing (it buffers notifications for ~600ms) before asking for
+        // params, so this reads the confirmed slot rather than the optimistic one.
+        setTimeout(requestCabIRParamRefresh, 1300);
+      }
+    }
+
+    async function requestCabIRParamRefresh() {
+      if (!state.cabIR.on) {
+        log('Cab/IR param refresh skipped: Cab/IR is bypassed.');
+        return;
+      }
+      const slot = currentIRSlotIndex();
+
+      if (!slot || slot < 1 || slot > 5) {
+        log('Cab/IR param refresh skipped: current slot is library/unknown.');
+        return;
+      }
+
+      state.cabIR.selectedSlot = slot;
+      state.cabIR.paramsLoaded = false;
+
+      await writeC304(
+        'Cab/IR param refresh slot ' + slot,
+        new Uint8Array([0x08, 0xC0, 0x18, 0x00, 0x20, slot - 1, 0x5F, 0x00, 0x00, 0x00])
+      );
+    }
+
+    function isCabIRParamRefreshResponse(data) {
+      return data.length > 20 && frameType(data) === MSG.RetrievePresetCabinetSettingsLiteResponse;
+    }
+
+    function handleCabIRParamRefreshResponse(data) {
+      const text = printableASCII(data);
+
+      const parts = parseCabIRNameParts(text);
+      if (parts.mic) state.cabIR.mic = parts.mic;
+      if (parts.position !== null) state.cabIR.position = parts.position;
+
+      // Replies without a "cab/mic/pos" string carry mic and zero-based position
+      // in the first nested field 5: { 2: cab, 3: posZero, 4: mic }.
+      if (!parts.mic) {
+        const top = parseProtoFields(data.slice(2, data.length - 4));
+        const cabEntry = top[5] && top[5].find(entry => entry.wire === 2);
+        if (cabEntry) {
+          const cab = parseProtoFields(cabEntry.raw);
+          const mic = firstString(cab, 4);
+          if (mic) state.cabIR.mic = mic;
+          if (cab[3] && cab[3][0] && cab[3][0].wire === 0) state.cabIR.position = cab[3][0].value + 1;
+        }
+      }
+
+      const paramBlob = extractCabIRParamBlob(data);
+
+      if (!paramBlob) {
+        log('Cab/IR parameter response received but no param blob found.');
+        renderCaptureIR();
+        return;
+      }
+
+      const values = parseCabIRParamBlob(paramBlob);
+
+      if (values.levelNorm !== null) state.cabIR.levelDb = cabIRLevelNormalizedToDb(values.levelNorm);
+      if (values.highPassNorm !== null) state.cabIR.highPassHz = cabIRNormalizedToRange(values.highPassNorm, 20, 800, 1);
+      if (values.lowPassNorm !== null) state.cabIR.lowPassHz = cabIRNormalizedToRange(values.lowPassNorm, 1000, 20000, 1);
+
+      state.cabIR.paramsLoaded = true;
+
+      log(
+        'Cab/IR params loaded: level=' + state.cabIR.levelDb.toFixed(1) +
+        ' dB, HPF=' + Math.round(state.cabIR.highPassHz) +
+        ' Hz, LPF=' + Math.round(state.cabIR.lowPassHz) +
+        ' Hz, mic=' + state.cabIR.mic +
+        ', position=' + state.cabIR.position
+      );
+
+      renderCaptureIR();
+    }
+
+    // Field 8 (0x42 <len>) holds up to three float fields: 0D level, 15 high pass,
+    // 1D low pass. Fields equal to 0.0 are omitted by the device (protobuf), so
+    // the blob is 5, 10 or 15 bytes long.
+    function extractCabIRParamBlob(data) {
+      for (let i = 0; i + 2 < data.length; i++) {
+        const len = data[i + 1];
+        if (data[i] === 0x42 && len >= 5 && len <= 15 && len % 5 === 0 &&
+            [0x0D, 0x15, 0x1D].includes(data[i + 2]) && i + 2 + len <= data.length) {
+          return data.slice(i + 2, i + 2 + len);
+        }
+      }
+
+      return null;
+    }
+
+    function parseCabIRParamBlob(blob) {
+      // Omitted fields are 0.0 (protobuf default).
+      const out = {
+        levelNorm: 0,
+        highPassNorm: 0,
+        lowPassNorm: 0
+      };
+
+      for (let i = 0; i + 4 < blob.length;) {
+        const tag = blob[i++];
+
+        if ((tag === 0x0D || tag === 0x15 || tag === 0x1D) && i + 4 <= blob.length) {
+          const value = new DataView(blob.buffer, blob.byteOffset + i, 4).getFloat32(0, true);
+          if (tag === 0x0D) out.levelNorm = value;
+          if (tag === 0x15) out.highPassNorm = value;
+          if (tag === 0x1D) out.lowPassNorm = value;
+          i += 4;
+        } else {
+          break;
+        }
+      }
+
+      return out;
+    }
+
+    async function setCabIRFloatParam(label, paramId, normalized) {
+      await writeC304(
+        'Cab/IR ' + label,
+        new Uint8Array([0x09, 0xC0, paramId, ...float32LE(clamp(Number(normalized), 0, 1)), 0x5E, 0x00, 0x00, 0x00]),
+        'cab-param:' + paramId
+      );
+    }
+
+    async function setCabIRLevelDb(db) {
+      const value = clamp(Number(db), -96, 12);
+      state.cabIR.levelDb = value;
+      await setCabIRFloatParam('level ' + value.toFixed(1) + ' dB', 0x2D, cabIRLevelDbToNormalized(value));
+    }
+
+    async function setCabIRHighPassHz(hz) {
+      const value = clamp(Number(hz), 20, 800);
+      state.cabIR.highPassHz = value;
+      await setCabIRFloatParam('high pass ' + Math.round(value) + ' Hz', 0x35, cabIRRangeToNormalized(value, 20, 800));
+    }
+
+    async function setCabIRLowPassHz(hz) {
+      const value = clamp(Number(hz), 1000, 20000);
+      state.cabIR.lowPassHz = value;
+      await setCabIRFloatParam('low pass ' + Math.round(value) + ' Hz', 0x3D, cabIRRangeToNormalized(value, 1000, 20000));
+    }
+
+    async function setCabIRMicPosition(mic, position) {
+      if (!isFactoryCabIR()) {
+        log('Cab mic/position ignored: current IR is not a factory cab slot.');
+        return;
+      }
+
+      const cabName = String(state.currentIR.shortName || '').trim();
+      const micName = String(mic || state.cabIR.mic || '').trim();
+
+      if (!cabName || !micName) {
+        log('Cab mic/position ignored: missing cab or mic name.');
+        return;
+      }
+
+      const pos = clamp(Math.round(Number(position || state.cabIR.position || 1)), 1, 6);
+      const posZero = pos - 1;
+
+      state.cabIR.mic = micName;
+      state.cabIR.position = pos;
+      renderCaptureIRExtraParams();
+
+      const cabBytes = Array.from(new TextEncoder().encode(cabName));
+      const micBytes = Array.from(new TextEncoder().encode(micName));
+      const innerLen = 8 + cabBytes.length + micBytes.length;
+
+      const payload = new Uint8Array([
+        0x00,
+        0xC0,
+        0x1A,
+        innerLen,
+        0x08,
+        0x00,
+        0x12,
+        cabBytes.length,
+        ...cabBytes,
+        0x18,
+        posZero,
+        0x22,
+        micBytes.length,
+        ...micBytes,
+        0x5E,
+        0x00,
+        0x00,
+        0x00
+      ]);
+      payload[0] = payload.length - 2;
+
+      await writeC304('Cab mic/position ' + micName + ' pos ' + pos, payload);
+    }
+
+    function setBlockToNone(blockKey) {
+      const block = state.blocks[blockKey];
+      if (!block) return;
+      const none = block.models.find(m => m.name === 'None');
+      block.model = 'None';
+      block.params = none && none.params ? structuredClone(none.params) : [];
+      block.on = false;
+    }
+
+    function findModelByCurrentStateID(block, idHex) {
+      const clean = String(idHex || '').toUpperCase();
+
+      const direct = block.models.find(model =>
+        model.id && hex(model.id).replaceAll(' ', '').toUpperCase() === clean
+      );
+
+      if (direct) return direct;
+
+      return null;
+    }
+
+    function cancelFXParamRefresh() {
+      state.paramRefreshQueue = [];
+      state.pendingParamBlock = null;
+      if (state.pendingParamTimer) clearTimeout(state.pendingParamTimer);
+      state.pendingParamTimer = null;
+    }
+
+    // Only active blocks are read: querying bypassed blocks crashed the Nano.
+    function queueFXParamRefreshes() {
+      cancelFXParamRefresh();
+      state.paramRefreshQueue = FX_BLOCK_KEYS.filter(key => {
+        const block = state.blocks[key];
+        return block && block.on && block.model !== 'None' && block.params && block.params.length > 0;
+      });
+
+      if (state.paramRefreshQueue.length === 0) {
+        log('No active FX blocks to refresh.');
+        return;
+      }
+
+      log('Refreshing FX parameters: ' + state.paramRefreshQueue.map(key => state.blocks[key].title).join(', '));
+      requestNextFXParamRefresh();
+    }
+
+    async function requestNextFXParamRefresh() {
+      if (state.pendingParamBlock) return;
+
+      const blockKey = state.paramRefreshQueue.shift();
+      if (!blockKey) return;
+
+      const cfg = blockSlotConfig[blockKey];
+      const block = state.blocks[blockKey];
+
+      if (!cfg || !block) {
+        requestNextFXParamRefresh();
+        return;
+      }
+
+      state.pendingParamBlock = blockKey;
+
+      if (state.pendingParamTimer) clearTimeout(state.pendingParamTimer);
+      state.pendingParamTimer = setTimeout(() => {
+        log('FX parameter refresh timed out for ' + block.title);
+        state.pendingParamBlock = null;
+        requestNextFXParamRefresh();
+      }, 900);
+
+      await writeC304(
+        block.title + ' param refresh',
+        new Uint8Array([0x08, 0xC0, 0x08, 0x03, 0x18, cfg.refreshSlot, 0x89, 0x00, 0x00, 0x00])
+      );
+    }
+
+    function isFXParamRefreshResponse(data) {
+      return data.length >= 10 &&
+        data[1] === 0xC0 &&
+        data[2] === 0x08 &&
+        data[3] === 0x06 &&
+        data[4] === 0x22;
+    }
+
+    function handleFXParamRefreshResponse(data) {
+      const blockKey = state.pendingParamBlock;
+
+      if (!blockKey) {
+        log('FX parameter response received with no pending block.');
+        return;
+      }
+
+      const block = state.blocks[blockKey];
+      const floatByteLength = data[5];
+      const start = 6;
+      const end = start + floatByteLength;
+
+      if (!block || end > data.length) {
+        log('Invalid FX parameter response for ' + blockKey + ': ' + hex(data));
+        state.pendingParamBlock = null;
+        requestNextFXParamRefresh();
+        return;
+      }
+
+      const floats = decodeFloat32Array(data.slice(start, end));
+      applyFloatValuesToBlock(blockKey, floats);
+
+      if (state.pendingParamTimer) clearTimeout(state.pendingParamTimer);
+      state.pendingParamBlock = null;
+
+      log(block.title + ' params loaded: ' + floats.map(x => x.toFixed(3)).join(', '));
+      render();
+
+      setTimeout(requestNextFXParamRefresh, 80);
+    }
+
+    function decodeFloat32Array(bytes) {
+      const out = [];
+      const view = new DataView(new Uint8Array(bytes).buffer);
+
+      for (let i = 0; i + 3 < bytes.length; i += 4) {
+        out.push(view.getFloat32(i, true));
+      }
+
+      return out;
+    }
+
+    function applyFloatValuesToBlock(blockKey, floats) {
+      const block = state.blocks[blockKey];
+      if (!block || !block.params) return;
+
+      floats.forEach((normalized, index) => {
+        const param = block.params[index];
+        if (!param) return;
+        param.value = normalizedToParamValue(param, normalized);
+      });
+    }
+
+    function normalizedToParamValue(param, normalized) {
+      const meta = param.meta || rangeMeta(0, 10, 0.1, '', 1);
+      const n = clamp(Number(normalized), 0, 1);
+
+      if (meta.kind === 'enum') {
+        const maxIndex = Math.max(0, meta.options.length - 1);
+        return Math.max(0, Math.min(maxIndex, Math.round(n * maxIndex)));
+      }
+
+      return roundToStep(meta.min + (n * (meta.max - meta.min)), meta.step || 0.1);
+    }
+
+function parseSelectedCaptureState(payload) {
+      const fields = parseProtoFields(payload);
+      return {
+        enabled: fields[1] && fields[1][0] ? fields[1][0].value : null,
+        name: firstString(fields, 2),
+        id: firstString(fields, 3)
+      };
+    }
+
+    function parseSelectedIRState(payload) {
+      const fields = parseProtoFields(payload);
+      return {
+        enabled: fields[1] && fields[1][0] ? fields[1][0].value : null,
+        shortName: firstString(fields, 2),
+        fullName: firstString(fields, 3)
+      };
+    }
+
+    function isFEStreamPacket(data) {
+      if (data.length < 3) return false;
+      if (data[1] === 0xC0) return false; // complete single-packet message
+      if (data[0] === 0xFE || data[0] === 0xFD || data[0] === 0xCE || data[0] === 0xD0) return true;
+
+      if ((state.stateMode === 'metadata' || state.stateMode === 'current' || state.stateMode === 'library') && (data[1] & 0x80) === 0x80) return true;
+
+      return false;
+    }
+
+    function appendFEStreamPayload(data) {
+      const payload = data.slice(2);
+      for (const b of payload) state.feBytes.push(b);
+    }
+
+    function parseCurrentPresetState(data) {
+      state.protocol.lastStateSync = Date.now();
+      log('CURRENT STATE CANDIDATE len=' + data.length + ': ' + hex(data));
+    }
+
+    function scheduleFEParse() {
+      if (state.feTimer) clearTimeout(state.feTimer);
+      state.feTimer = setTimeout(parseBufferedFE, 1500);
+    }
+
+    function parseBufferedFE() {
+      if (state.feBytes.length === 0) return;
+
+      if (state.protocol.metadataLoaded) {
+        log('FE metadata ignored: already loaded for this session.');
+        state.feBytes = [];
+        state.stateMode = 'idle';
+        return;
+      }
+
+      const bytes = state.feBytes.slice();
+      log('Parsing FE payload buffer: ' + bytes.length + ' bytes');
+      const parsed = parseStructuredFE(bytes);
+
+      state.captureNames = new Map();
+      parsed.captures.forEach((capture, idx) => {
+        const name = capture.name;
+        if (name && !/^capture\s+\d+$/i.test(name)) {
+          state.captureNames.set(idx + 1, name);
+        }
+      });
+
+      state.presetNames = new Map();
+      parsed.presets.forEach((preset, idx) => {
+        state.presetNames.set(idx + 1, preset.name || 'Empty');
+      });
+
+      state.irNames = new Map();
+      parsed.irs.forEach((ir, idx) => {
+        const name = ir.shortName;
+        if (name && !/^ir\s+\d+$/i.test(name)) {
+          state.irNames.set(idx + 1, name);
+        }
+      });
+
+      state.protocol.feSyncComplete = true;
+      state.protocol.metadataLoaded = true;
+
+      log('Structured FE parse: captures=' + parsed.captures.length + ', presets=' + parsed.presets.length + ', IRs=' + parsed.irs.length);
+      log('Metadata locked for this session.');
+
+      if (parsed.captures.length > 0) log('Capture sample: ' + parsed.captures.slice(0, 5).map(x => x.name).join(' | '));
+      if (parsed.presets.length > 0) log('Preset sample: ' + parsed.presets.slice(0, 8).map(x => x.name || 'Empty').join(' | '));
+      if (parsed.irs.length > 0) log('IR sample: ' + parsed.irs.map(x => x.shortName).join(' | '));
+
+     renderPresetSelect();
+      renderCaptureIR();
+
+      state.feBytes = [];
+      state.stateMode = 'idle';
+    }
+
+    function parseStructuredFE(bytes) {
+      const top = parseProtoFields(bytes);
+      const captures = (top[17] || []).filter(entry => entry.wire === 2).map(entry => parseCaptureRecord(entry.raw)).filter(record => record.id && record.name).slice(0, 25);
+      const presets = (top[18] || []).filter(entry => entry.wire === 2).map(entry => parsePresetRecord(entry.raw)).filter(record => isValidPresetRecord(record)).slice(0, 64);
+      while (presets.length < 64) presets.push({ name: '', captureName: '', captureID: '', irShortName: '', irFullName: '' });
+      const irs = (top[19] || []).filter(entry => entry.wire === 2).map(entry => parseIRRecord(entry.raw)).filter(record => record.shortName || record.fullName).slice(0, 5);
+      return { captures, presets, irs };
+    }
+
+    function parseCaptureRecord(payload) {
+      const fields = parseProtoFields(payload);
+      return { id: firstString(fields, 1), name: firstString(fields, 2), creator: nestedStrings(fields, 4).join(' / '), instrument: firstString(fields, 10) };
+    }
+
+    function parsePresetRecord(payload) {
+      const fields = parseProtoFields(payload);
+      return { name: firstString(fields, 1), captureName: firstString(fields, 7), captureID: firstString(fields, 8), irShortName: firstString(fields, 9), irFullName: firstString(fields, 10) };
+    }
+
+    function parseIRRecord(payload) {
+      const fields = parseProtoFields(payload);
+      return { shortName: firstString(fields, 1), fullName: firstString(fields, 3) };
+    }
+
+    function isValidPresetRecord(record) {
+      if (record.name === '') return true;
+      if (record.name === null || record.name === undefined) return false;
+      if (record.name.length > 120) return false;
+      return true;
+    }
+
+    function parseProtoFields(bytes) {
+      const fields = {};
+      let i = 0;
+      while (i < bytes.length) {
+        const tagInfo = readVarint(bytes, i);
+        if (!tagInfo) break;
+        const tag = tagInfo.value;
+        const field = tag >> 3;
+        const wire = tag & 0x07;
+        i = tagInfo.next;
+        if (!fields[field]) fields[field] = [];
+        if (wire === 0) {
+          const valueInfo = readVarint(bytes, i);
+          if (!valueInfo) break;
+          fields[field].push({ wire, raw: bytes.slice(i, valueInfo.next), value: valueInfo.value });
+          i = valueInfo.next;
+        } else if (wire === 1) {
+          if (i + 8 > bytes.length) break;
+          fields[field].push({ wire, raw: bytes.slice(i, i + 8) });
+          i += 8;
+        } else if (wire === 2) {
+          const lenInfo = readVarint(bytes, i);
+          if (!lenInfo) break;
+          const start = lenInfo.next;
+          const end = start + lenInfo.value;
+          if (end > bytes.length) break;
+          const raw = bytes.slice(start, end);
+          fields[field].push({ wire, raw, text: decodePrintable(raw) });
+          i = end;
+        } else if (wire === 5) {
+          if (i + 4 > bytes.length) break;
+          fields[field].push({ wire, raw: bytes.slice(i, i + 4) });
+          i += 4;
+        } else {
+          break;
+        }
+      }
+      return fields;
+    }
+
+    function firstString(fields, fieldNumber) {
+      const entries = fields[fieldNumber] || [];
+      for (const entry of entries) {
+        if (entry.wire !== 2) continue;
+        const text = decodePrintable(entry.raw);
+        if (text !== null) return text;
+      }
+      return '';
+    }
+
+    function nestedStrings(fields, fieldNumber) {
+      const entries = fields[fieldNumber] || [];
+      const out = [];
+      for (const entry of entries) {
+        if (entry.wire !== 2) continue;
+        const nested = parseProtoFields(entry.raw);
+        Object.keys(nested).forEach(key => {
+          nested[key].forEach(item => {
+            if (item.wire === 2) {
+              const text = decodePrintable(item.raw);
+              if (text) out.push(text);
+            }
+          });
+        });
+      }
+      return out;
+    }
+
+    function readVarint(bytes, offset) {
+      let value = 0n;
+      let shift = 0n;
+      for (let i = offset; i < Math.min(bytes.length, offset + 10); i++) {
+        const b = BigInt(bytes[i]);
+        value |= (b & 0x7Fn) << shift;
+        if ((b & 0x80n) === 0n) {
+          return { value: value > BigInt(Number.MAX_SAFE_INTEGER) ? Number.MAX_SAFE_INTEGER : Number(value), next: i + 1 };
+        }
+        shift += 7n;
+      }
+      return null;
+    }
+
+    function decodePrintable(bytes) {
+      if (bytes.length === 0) return '';
+      for (const b of bytes) if (b < 32 || b > 126) return null;
+      return new TextDecoder().decode(new Uint8Array(bytes));
+    }
+
+    // Message framing and types as used by the official Cortex Cloud app (AumMessage):
+    // [len = frame.length - 2] C0 [protobuf payload] [u32 LE message type].
+    const MSG = {
+      SetPresetSlotsRequest: 29,
+      SetPresetSlotsResponse: 30,
+      RetrievePresetCabinetSettingsLiteResponse: 96,
+      RetrieveLibraryContentRequest: 76,
+      RetrieveLibraryContentResponse: 77,
+      SetCaptureSlotContentRequest: 80,
+      SetCaptureSlotContentResponse: 81,
+      SetCabinetSlotContentRequest: 78,
+      SetCabinetSlotContentResponse: 79,
+      TunerMode: 127,
+      TunerMetering: 128,
+      RenamePresetRequest: 111,
+      RenamePresetResponse: 112,
+      PresetDirtyStateChanged: 115
+    };
+    const PRESET_SLOT_OTHER = 4; // PresetSlotType: 0 A1, 1 B1, 2 A2, 3 B2, 4 other
+
+    function buildFrame(payload, type) {
+      const frame = [0, 0xC0, ...payload, type & 0xFF, (type >> 8) & 0xFF, 0, 0];
+      frame[0] = frame.length - 2;
+      return new Uint8Array(frame);
+    }
+
+    function frameType(data) {
+      if (data.length < 6 || data[1] !== 0xC0) return null;
+      const n = data.length;
+      return (data[n - 4] | (data[n - 3] << 8) | (data[n - 2] << 16) | (data[n - 1] << 24)) >>> 0;
+    }
+
+    function framePayloadFields(data) {
+      return parseProtoFields(data.slice(2, data.length - 4));
+    }
+
+    // protobuf int32: negative values are sign-extended to a 10-byte varint.
+    function encodeInt32(value) {
+      if (value >= 0) return encodeVarint(value);
+      let x = BigInt.asUintN(64, BigInt(value));
+      const out = [];
+      while (x > 0x7Fn) {
+        out.push(Number(x & 0x7Fn) | 0x80);
+        x >>= 7n;
+      }
+      out.push(Number(x));
+      return out;
+    }
+
+    // SetPresetSlotsRequestMessage exactly as the app's changePreset() builds it:
+    // 3 context=PlayMode, 4 currentPresetIndex, 5-8 footswitch slots = -1 (unchanged),
+    // 9 currentSlot (which footswitch slot holds this preset, else OTHER).
+    function presetChangeFrame(presetIndex) {
+      const slots = state.presetSlots;
+      const slotIndex = [slots.a1, slots.b1, slots.a2, slots.b2].indexOf(presetIndex);
+      const currentSlot = slotIndex === -1 ? PRESET_SLOT_OTHER : slotIndex;
+      return buildFrame([
+        0x18, 0x00,
+        0x20, ...encodeVarint(presetIndex),
+        0x28, ...encodeInt32(-1),
+        0x30, ...encodeInt32(-1),
+        0x38, ...encodeInt32(-1),
+        0x40, ...encodeInt32(-1),
+        0x48, currentSlot
+      ], MSG.SetPresetSlotsRequest);
+    }
+
+    // SetPresetSlotsResponseMessage { 4: status = Success }. The app sends it whenever
+    // the device reports a preset change; without it the Nano waits in a pending
+    // preset-change state (= the ack used by rixrix/deskop-nano-cortex).
+    const PRESET_CHANGE_ACK = buildFrame([0x20, 0x01], MSG.SetPresetSlotsResponse);
+
+    async function selectPreset(preset) {
+      if (!state.connected) {
+        log('Preset ' + preset + ' not sent: not connected.');
+        renderPresetSelect();
+        return;
+      }
+
+      state.selectedPreset = preset;
+      state.capture.lastActiveSlot = null;
+      state.cabIR.lastActiveSlot = null;
+      renderPresetSelect();
+
+      await writeC304('Preset change ' + preset, presetChangeFrame(preset - 1));
+      beginPresetLoad();
+    }
+
+    // Single-packet messages identified by their type. Returns true when handled.
+    function handleTypedMessage(data) {
+      const type = frameType(data);
+
+      if (type === MSG.SetPresetSlotsRequest) {
+        // Preset changed on the device (footswitch, knob) - mirror the app: update,
+        // acknowledge, then re-read the state.
+        const fields = framePayloadFields(data);
+        const value = (n, fallback) => fields[n] && fields[n][0] ? fields[n][0].value : fallback;
+        state.selectedPreset = value(4, 0) + 1;
+        state.presetSlots = { a1: value(5, 0), b1: value(6, 0), a2: value(7, 0), b2: value(8, 0) };
+        log('Device preset change: preset ' + state.selectedPreset);
+        renderPresetSelect();
+        writeC304('Preset change ack', PRESET_CHANGE_ACK);
+        beginPresetLoad();
+        return true;
+      }
+
+      if (type === MSG.SetPresetSlotsResponse) {
+        const fields = framePayloadFields(data);
+        const ok = fields[4] && fields[4][0] && fields[4][0].value === 1;
+        log('Preset change ' + (ok ? 'confirmed' : 'FAILED') + ': ' + hex(data));
+        return true;
+      }
+
+      if (type === MSG.RetrieveLibraryContentResponse) {
+        parseLibraryContent(Array.from(data.slice(2)));
+        return true;
+      }
+
+      if (type === MSG.SetCabinetSlotContentResponse) {
+        handleCabinetSlotContentResponse(data);
+        return true;
+      }
+
+      if (type === MSG.TunerMode) {
+        // Tuner switched on/off on the device itself (footswitch).
+        const fields = framePayloadFields(data);
+        const on = Boolean(fields[4] && fields[4][0] && fields[4][0].value);
+        if (fields[7] && fields[7][0]) state.tuner.muted = Boolean(fields[7][0].value);
+        if (on) openTuner(false); else closeTuner(false);
+        return true;
+      }
+
+      if (type === MSG.SetCaptureSlotContentResponse) {
+        handleCaptureSlotContentResponse(data);
+        return true;
+      }
+
+      if (type === MSG.RenamePresetResponse) {
+        const fields = framePayloadFields(data);
+        const ok = fields[4] && fields[4][0] && fields[4][0].value === 1;
+        log('Rename ' + (ok ? 'confirmed' : 'FAILED: ' + (firstString(fields, 5) || hex(data))));
+        if (!ok) syncPresetNames();
+        return true;
+      }
+
+      if (type === MSG.PresetDirtyStateChanged) {
+        const fields = framePayloadFields(data);
+        state.presetDirty = Boolean(fields[3] && fields[3][0] && fields[3][0].value);
+        renderPresetSelect();
+        return true;
+      }
+
+      return false;
+    }
+
+    async function renamePreset() {
+      if (!state.connected) return;
+
+      const preset = state.selectedPreset;
+      const current = state.presetNames.get(preset) || '';
+      const entered = window.prompt('New name for preset ' + preset, current);
+      if (entered === null) return;
+
+      const name = entered.trim();
+      if (name.length < 4) { window.alert('Preset name must have at least 4 characters.'); return; }
+      const taken = Array.from(state.presetNames.entries()).some(([i, n]) => i !== preset && String(n).trim().toLowerCase() === name.toLowerCase());
+      if (taken) { window.alert('This preset name already exists.'); return; }
+
+      const nameBytes = Array.from(new TextEncoder().encode(name));
+      if (nameBytes.length > 64) { window.alert('Preset name is too long.'); return; }
+
+      // RenamePresetRequestMessage { 1: action=UPDATE, 3: presetIndex, 4: presetNewName }
+      await writeC304('Rename preset ' + preset + ' to "' + name + '"', buildFrame([
+        0x08, 0x01,
+        0x18, ...encodeVarint(preset - 1),
+        0x22, nameBytes.length, ...nameBytes
+      ], MSG.RenamePresetRequest));
+
+      state.presetNames.set(preset, name);
+      renderPresetSelect();
+    }
+
+    // ---- Capture library (RetrieveLibraryContent 76/77, SetCaptureSlotContent 80/81) ----
+
+    function requestLibraryContent() {
+      if (!state.connected) return;
+      if (state.stateMode !== 'idle' || state.pendingParamBlock) {
+        setTimeout(requestLibraryContent, 1000);
+        return;
+      }
+
+      state.stateMode = 'library';
+      state.libraryBytes = [];
+      // { 3: includeFactoryCaptures, 4: includeFactoryImpulseResponses, 5: includeUserCaptures, 6: includeUserImpulseResponses }
+      writeC304('Library content request', buildFrame([0x18, 0x01, 0x20, 0x01, 0x28, 0x01, 0x30, 0x01], MSG.RetrieveLibraryContentRequest));
+
+      // Give up waiting if nothing arrives.
+      setTimeout(() => { if (state.stateMode === 'library' && state.libraryBytes.length === 0) state.stateMode = 'idle'; }, 4000);
+    }
+
+    function utf8(bytes) {
+      return new TextDecoder().decode(new Uint8Array(bytes));
+    }
+
+    // RetrieveLibraryContentResponseMessage: 3 factoryCaptures[], 4 factoryImpulseResponses[] (names),
+    // 5 userCaptures[], 6 userImpulseResponses[] (names). NeuralCaptureSummaryRecord: 1 hash,
+    // 2 name, 13 isCorrupted. The app addresses library items by their position in these lists,
+    // so the index is kept while the lists are shown alphabetically.
+    function parseLibraryContent(bytes) {
+      state.libraryTimer = null;
+      if (state.stateMode === 'library') state.stateMode = 'idle';
+
+      let body = bytes;
+      const n = body.length;
+      if (n >= 4 && body[n - 4] === MSG.RetrieveLibraryContentResponse && body[n - 3] === 0 && body[n - 2] === 0 && body[n - 1] === 0) {
+        body = body.slice(0, n - 4);
+      }
+
+      const fields = parseProtoFields(body);
+      const toList = fieldNumber => (fields[fieldNumber] || [])
+        .filter(entry => entry.wire === 2)
+        .map((entry, index) => {
+          const record = parseProtoFields(entry.raw);
+          const name = record[2] && record[2][0] ? utf8(record[2][0].raw).trim() : '';
+          const corrupted = Boolean(record[13] && record[13][0] && record[13][0].value);
+          return { index, name, corrupted };
+        })
+        .filter(item => item.name && !item.corrupted);
+      const toNameList = fieldNumber => (fields[fieldNumber] || [])
+        .filter(entry => entry.wire === 2)
+        .map((entry, index) => ({ index, name: utf8(entry.raw).trim() }))
+        .filter(item => item.name);
+      const alphabetical = list => list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+      state.library = {
+        factory: alphabetical(toList(3)),
+        user: alphabetical(toList(5)),
+        irFactory: alphabetical(toNameList(4)),
+        irUser: alphabetical(toNameList(6)),
+        loaded: true,
+        requested: true
+      };
+      state.libraryBytes = [];
+      log('Capture library: ' + state.library.factory.length + ' factory, ' + state.library.user.length + ' user captures');
+      log('Cab/IR library: ' + state.library.irFactory.length + ' factory, ' + state.library.irUser.length + ' user IRs');
+      renderCaptureIR();
+    }
+
+    async function loadLibraryCapture(kind, index) {
+      const item = (kind === 'factory' ? state.library.factory : state.library.user).find(x => x.index === index);
+      const slot = state.capture.activeSlot;
+
+      if (!item) { renderCaptureIR(); return; }
+      if (!state.capture.on || !slot) {
+        window.alert('Bitte zuerst die Capture einschalten. Die Library-Capture wird in den aktiven Capture-Platz geladen.');
+        renderCaptureIR();
+        return;
+      }
+
+      const bank = Math.floor((slot - 1) / 5) + 1;
+      const position = ((slot - 1) % 5) + 1;
+      const previous = state.captureNames.get(slot) || ('Platz ' + slot);
+      const ok = window.confirm(
+        '"' + item.name + '" in Capture-Platz ' + slot + ' (Bank ' + bank + ', Position ' + position + ') laden?' +
+        String.fromCharCode(10, 10) + 'Dort liegt bisher "' + previous + '". Diese Capture bleibt in der Library erhalten.'
+      );
+      if (!ok) { renderCaptureIR(); return; }
+
+      // SetCaptureSlotContentRequestMessage { 3: captureSlot (0-24),
+      //   4: factory id { 1: index, 2: name } | 5: user id { 1: index, 2: name } }
+      const nameBytes = Array.from(new TextEncoder().encode(item.name));
+      const identifier = [0x08, ...encodeVarint(item.index), 0x12, ...encodeVarint(nameBytes.length), ...nameBytes];
+      const frame = buildFrame([
+        0x18, ...encodeVarint(slot - 1),
+        kind === 'factory' ? 0x22 : 0x2A, ...encodeVarint(identifier.length), ...identifier
+      ], MSG.SetCaptureSlotContentRequest);
+
+      if (frame.length - 2 > 255) { window.alert('Capture name is too long.'); renderCaptureIR(); return; }
+
+      state.pendingSlotAssignment = { slot, name: item.name };
+      await writeC304('Load library capture "' + item.name + '" into slot ' + slot, frame);
+    }
+
+    // SetCaptureSlotContentResponseMessage { 3: status (1 = success), 4: message }
+    function handleCaptureSlotContentResponse(data) {
+      const fields = framePayloadFields(data);
+      const ok = fields[3] && fields[3][0] && fields[3][0].value === 1;
+      const pending = state.pendingSlotAssignment;
+      state.pendingSlotAssignment = null;
+
+      if (!ok) {
+        const message = fields[4] && fields[4][0] ? utf8(fields[4][0].raw) : hex(data);
+        log('Loading library capture FAILED: ' + message);
+        window.alert('Der Nano hat das Laden der Capture abgelehnt: ' + message);
+        renderCaptureIR();
+        return;
+      }
+
+      log('Library capture loaded' + (pending ? ': "' + pending.name + '" in slot ' + pending.slot : ''));
+      if (pending) state.captureNames.set(pending.slot, pending.name);
+      state.protocol.skipFXModelApply = true;
+      setTimeout(requestCurrentPresetState, 300);
+    }
+
+    // SetCabinetSlotContentRequestMessage { 3: cabinetSlot (0-4),
+    //   4: factory IR { 1: index, 2: name } | 5: user IR { 1: index, 2: name } } -> response 79
+    async function loadLibraryCab(kind, index) {
+      const item = state.library[kind].find(x => x.index === index);
+      if (!item) { renderCaptureIR(); return; }
+
+      const fallback = state.cabIR.selectedSlot >= 1 && state.cabIR.selectedSlot <= 5 ? state.cabIR.selectedSlot : 1;
+      const entered = window.prompt(
+        '"' + item.name + '" in welchen Cab-Platz laden? (1-5)' + String.fromCharCode(10) +
+        Array.from({ length: 5 }, (_, i) => (i + 1) + ': ' + (state.irNames.get(i + 1) || 'IR ' + (i + 1))).join(String.fromCharCode(10)) +
+        String.fromCharCode(10, 10) + 'Die bisherige Cab bleibt in der Library erhalten.',
+        String(fallback)
+      );
+      const slot = Number(entered);
+      if (entered === null || !Number.isInteger(slot) || slot < 1 || slot > 5) { renderCaptureIR(); return; }
+
+      const nameBytes = Array.from(new TextEncoder().encode(item.name));
+      const identifier = [0x08, ...encodeVarint(item.index), 0x12, ...encodeVarint(nameBytes.length), ...nameBytes];
+      const frame = buildFrame([
+        0x18, ...encodeVarint(slot - 1),
+        kind === 'irFactory' ? 0x22 : 0x2A, ...encodeVarint(identifier.length), ...identifier
+      ], MSG.SetCabinetSlotContentRequest);
+
+      if (frame.length - 2 > 255) { window.alert('Cab name is too long.'); renderCaptureIR(); return; }
+
+      state.pendingCabAssignment = { slot, name: item.name };
+      await writeC304('Load library cab "' + item.name + '" into cab slot ' + slot, frame);
+    }
+
+    function handleCabinetSlotContentResponse(data) {
+      const fields = framePayloadFields(data);
+      const ok = fields[3] && fields[3][0] && fields[3][0].value === 1;
+      const pending = state.pendingCabAssignment;
+      state.pendingCabAssignment = null;
+
+      if (!ok) {
+        const message = fields[4] && fields[4][0] ? utf8(fields[4][0].raw) : hex(data);
+        log('Loading library cab FAILED: ' + message);
+        window.alert('Der Nano hat das Laden der Cab abgelehnt: ' + message);
+        renderCaptureIR();
+        return;
+      }
+
+      log('Library cab loaded' + (pending ? ': "' + pending.name + '" in cab slot ' + pending.slot : ''));
+      if (!pending) return;
+      state.irNames.set(pending.slot, pending.name);
+      state.currentIR = { shortName: pending.name, fullName: pending.name, inBank: true, slot: pending.slot };
+      selectCabIRSlot(pending.slot); // activate the slot, then re-read state and cab parameters
+    }
+
+    // ---- Tuner (TunerModeMessage 127 out/in, TunerMeteringMessage 128 in) ----
+
+    // TunerModeMessage { 4: tunerMode, 5: baseFrequency (double, Hz), 6: liveTuner, 7: muted },
+    // as the app's _sendTunerModeMessage builds it. Off: { 4: false }.
+    function tunerModeFrame(on) {
+      if (!on) return buildFrame([0x20, 0x00], MSG.TunerMode);
+      const freq = new Uint8Array(8);
+      new DataView(freq.buffer).setFloat64(0, state.tuner.baseFrequency, true);
+      return buildFrame([0x20, 0x01, 0x29, ...freq, 0x30, 0x00, 0x38, state.tuner.muted ? 1 : 0], MSG.TunerMode);
+    }
+
+    function openTuner(send = true) {
+      state.tuner.open = true;
+      $('tunerOverlay').hidden = false;
+      $('tunerFreq').value = String(state.tuner.baseFrequency);
+      $('tunerMute').classList.toggle('on', state.tuner.muted);
+      renderTunerReading(null);
+      if (send && state.connected) writeC304('Tuner on (' + state.tuner.baseFrequency + ' Hz)', tunerModeFrame(true));
+    }
+
+    function closeTuner(send = true) {
+      if (!state.tuner.open) return;
+      state.tuner.open = false;
+      $('tunerOverlay').hidden = true;
+      if (send && state.connected) writeC304('Tuner off', tunerModeFrame(false));
+    }
+
+    // TunerMeteringMessage { 4: note, 5: deviation (cents, double), 6: isDeviationValid, 7: centered }.
+    // Zero/empty values are omitted by the device.
+    function handleTunerMetering(data) {
+      if (!state.tuner.open) return;
+      const fields = framePayloadFields(data);
+      const note = fields[4] && fields[4][0] ? utf8(fields[4][0].raw) : '';
+      const devRaw = fields[5] && fields[5][0] && fields[5][0].raw.length === 8 ? fields[5][0].raw : null;
+      const deviation = devRaw ? new DataView(Uint8Array.from(devRaw).buffer).getFloat64(0, true) : 0;
+      const valid = Boolean(fields[6] && fields[6][0] && fields[6][0].value);
+      const centered = Boolean(fields[7] && fields[7][0] && fields[7][0].value);
+      renderTunerReading(note ? { note, deviation, valid, centered } : null);
+    }
+
+    function renderTunerReading(reading) {
+      const box = $('tunerOverlay');
+      $('tunerNote').textContent = reading ? reading.note : '–';
+      const cents = reading && reading.valid ? clamp(reading.deviation, -50, 50) : 0;
+      $('tunerNeedle').style.left = (50 + cents) + '%';
+      $('tunerNeedle').style.opacity = reading && reading.valid ? '1' : '0.25';
+      $('tunerCents').textContent = reading && reading.valid ? (cents > 0 ? '+' : '') + cents.toFixed(1) + ' ct' : '';
+      box.classList.toggle('in-tune', Boolean(reading && reading.valid && (reading.centered || Math.abs(cents) <= 2)));
+      box.classList.toggle('flat', Boolean(reading && reading.valid && cents < -2));
+      box.classList.toggle('sharp', Boolean(reading && reading.valid && cents > 2));
+    }
+
+    function setTunerOption(change) {
+      Object.assign(state.tuner, change);
+      $('tunerMute').classList.toggle('on', state.tuner.muted);
+      if (state.tuner.open && state.connected) writeC304('Tuner settings (' + state.tuner.baseFrequency + ' Hz' + (state.tuner.muted ? ', muted' : '') + ')', tunerModeFrame(true));
+    }
+
+    // Re-read the preset names after a failed rename.
+    function syncPresetNames() {
+      state.protocol.metadataLoaded = false;
+      syncMetadataAndState();
+    }
+
+    async function refreshLists() { await syncMetadataAndState(); }
+
+    async function setCapture(slot) {
+      if (!Number.isFinite(slot) || slot < 1 || slot > 25) return;
+      const index = slot - 1;
+
+      state.capture.selectedSlot = slot;
+      state.capture.on = true;
+      state.capture.lastActiveSlot = slot;
+
+      await writeC304('08C0 capture change ' + slot, new Uint8Array([0x08, 0xC0, 0x18, 0x04, 0x20, index, 0x1C, 0x00, 0x00, 0x00]));
+
+      renderCaptureIR();
+      state.protocol.skipFXModelApply = true;
+      setTimeout(requestCurrentPresetState, 300);
+    }
+
+    async function savePreset() {
+      const name = state.presetNames.get(state.selectedPreset) || ('Preset ' + state.selectedPreset);
+      const nameBytes = new TextEncoder().encode(name);
+      const packet = new Uint8Array(12 + nameBytes.length);
+      let i = 0;
+      packet[i++] = nameBytes.length + 10;
+      packet[i++] = 0xC0;
+      packet[i++] = 0x08;
+      packet[i++] = 0x01;
+      packet[i++] = 0x18;
+      packet[i++] = state.selectedPreset - 1;
+      packet[i++] = 0x2A;
+      packet[i++] = nameBytes.length;
+      packet.set(nameBytes, i);
+      i += nameBytes.length;
+      packet[i++] = 0x03;
+      packet[i++] = 0x00;
+      packet[i++] = 0x00;
+      packet[i++] = 0x00;
+      await writeC304('save preset', packet);
+      setTimeout(() => writeC304('post-save refresh', bytesFromHex('0C C0 08 03 18 00 20 01 28 01 01 00 00 00')), 100);
+    }
+
+    async function setGateEnabled(enabled) {
+      const value = enabled ? 0x00 : 0x01;
+      await writeC304(
+        'Gate ' + (enabled ? 'ON' : 'OFF'),
+        new Uint8Array([0x0A, 0xC0, 0x08, 0x01, 0x18, 0x09, 0x20, value, 0x1F, 0x00, 0x00, 0x00])
+      );
+    }
+
+    function encodeVarint(value) {
+      const out = [];
+      while (value > 0x7F) {
+        out.push((value & 0x7F) | 0x80);
+        value >>= 7;
+      }
+      out.push(value);
+      return out;
+    }
+
+    function captureDbToRaw(db) {
+      const value = Math.max(-24, Math.min(12, Number(db)));
+
+      if (value <= 0) {
+        return Math.round(((value + 24) / 24) * 128);
+      }
+
+      return Math.round(128 + (value / 12) * 127);
+    }
+
+    function captureRawToDb(raw) {
+      raw = Math.max(0, Math.min(255, Number(raw)));
+
+      if (raw <= 128) {
+        return ((raw / 128) * 24) - 24;
+      }
+
+      return ((raw - 128) / 127) * 12;
+    }
+
+    function setCaptureVolumeUI(db) {
+      const slider = $('captureVolumeSlider');
+      const value = $('captureVolumeValue');
+      if (!slider || !value) return;
+
+      slider.value = Number(db).toFixed(1);
+      value.textContent = Number(db).toFixed(1) + ' dB';
+    }
+
+    async function setCaptureVolumeDb(db) {
+      const clampedDb = Math.max(-24, Math.min(12, Number(db)));
+      const raw = captureDbToRaw(clampedDb);
+      const rawBytes = encodeVarint(raw);
+
+      const payload = new Uint8Array([
+        0x09 + rawBytes.length,
+        0xC0,
+        0x18, 0x0A,
+        0x20, ...rawBytes,
+        0x28, 0x00,
+        0x1A, 0x00, 0x00, 0x00
+      ]);
+
+      await writeC304(
+        'Capture volume ' + clampedDb.toFixed(1) + ' dB',
+        payload,
+        'capture-volume'
+      );
+    }
+
+    async function setGateReduction(percent) {
+      const pct = Math.max(0, Math.min(100, Math.round(percent)));
+      const encoded = pct + 108;
+      const encodedBytes = encodeVarint(encoded);
+      const payload = new Uint8Array([0x00, 0xC0, 0x18, 0x0B, 0x20, ...encodedBytes, 0x28, 0x00, 0x1A, 0x00, 0x00, 0x00]);
+      payload[0] = payload.length - 2;
+      await writeC304('Gate reduction ' + pct + '%', payload, 'gate-reduction');
+    }
+
+    async function setFXModel(blockKey, modelName) {
+      const cfg = blockSlotConfig[blockKey];
+      const block = state.blocks[blockKey];
+      const model = block ? block.models.find(m => m.name === modelName) : null;
+
+      if (!cfg || !block) {
+        log('No block config for ' + blockKey);
+        return;
+      }
+
+      if (!model || !model.id) {
+        log('No ' + cfg.label + ' model ID mapped for ' + modelName);
+        return;
+      }
+
+      block.model = model.name;
+      block.params = structuredClone(model.params);
+      render();
+
+      const payload = new Uint8Array(
+        [7 + model.id.length, 0xC0, 0x18, cfg.modelSlot, 0x20]
+          .concat(model.id, [0x88, 0x00, 0x00, 0x00])
+      );
+
+      await writeC304(cfg.label + ' model select ' + model.name, payload);
+
+      setTimeout(() => {
+        state.paramRefreshQueue = [blockKey];
+        state.pendingParamBlock = null;
+        requestNextFXParamRefresh();
+      }, 120);
+    }
+
+    async function setFXBlockEnabled(blockKey, enabled) {
+      const cfg = blockSlotConfig[blockKey];
+
+      if (!cfg || cfg.enableSlot === null || cfg.enableSlot === undefined) {
+        log((cfg ? cfg.label : blockKey) + ' toggle not wired yet');
+        return;
+      }
+
+      const value = enabled ? 0x00 : 0x01;
+
+      await writeC304(
+        cfg.label + ' ' + (enabled ? 'ON' : 'OFF'),
+        new Uint8Array([0x0A, 0xC0, 0x08, 0x01, 0x18, cfg.enableSlot, 0x20, value, 0x1F, 0x00, 0x00, 0x00])
+      );
+    }
+
+    function float32LE(value) {
+      const buf = new ArrayBuffer(4);
+      new DataView(buf).setFloat32(0, value, true);
+      return Array.from(new Uint8Array(buf));
+    }
+
+    function paramDisplayValue(param) {
+      const meta = param.meta || rangeMeta(0, 10, 0.1, '', 1);
+
+      if (meta.kind === 'enum') return meta.options[param.value] || meta.options[0] || '';
+
+      const decimals = meta.decimals === null || meta.decimals === undefined ? decimalsFromStep(meta.step || 0.1) : meta.decimals;
+      return Number(param.value).toFixed(decimals) + (meta.unit ? ' ' + meta.unit : '');
+    }
+
+    function paramValueToNormalized(param) {
+      const meta = param.meta || rangeMeta(0, 10, 0.1, '', 1);
+
+      if (meta.kind === 'enum') {
+        const maxIndex = Math.max(1, meta.options.length - 1);
+        return clamp(param.value / maxIndex, 0, 1);
+      }
+
+      return clamp((Number(param.value) - meta.min) / (meta.max - meta.min), 0, 1);
+    }
+
+    async function setFXParam(blockKey, param, rawValue = null) {
+      const cfg = blockSlotConfig[blockKey];
+      if (!cfg) return;
+
+      if (rawValue !== null && rawValue !== undefined) param.value = rawValue;
+
+      const normalized = paramValueToNormalized(param);
+
+      const payload = new Uint8Array([
+        0x0F, 0xC0,
+        0x08, 0x01,
+        0x18, cfg.modelSlot,
+        0x20, param.index,
+        0x2D,
+        ...float32LE(normalized),
+        0x63, 0x00, 0x00, 0x00
+      ]);
+
+      await writeC304(cfg.label + ' param ' + param.name + '=' + paramDisplayValue(param), payload, 'fx-param:' + blockKey + ':' + param.index);
+    }
+
+    function coerceParamValue(param, rawValue) {
+      const meta = param.meta || rangeMeta(0, 10, 0.1, '', 1);
+      const value = Number(rawValue);
+
+      if (Number.isNaN(value)) return null;
+
+      if (meta.kind === 'enum') return Math.max(0, Math.min(meta.options.length - 1, Math.round(value)));
+      return roundToStep(clamp(value, meta.min, meta.max), meta.step || 0.1);
+    }
+
+    function sendParamValue(blockKey, param) {
+      if (blockKey === 'gate') {
+        setGateReduction(param.value);
+        return;
+      }
+
+      if (FX_BLOCK_KEYS.includes(blockKey)) setFXParam(blockKey, param);
+    }
+
+    function setParamValue(blockKey, param, rawValue, shouldSend) {
+      const value = coerceParamValue(param, rawValue);
+      if (value === null) return;
+
+      param.value = value;
+      render();
+
+      if (shouldSend) sendParamValue(blockKey, param);
+    }
+
+    function updateKnobVisual(knobEl, valueEl, normalized, text) {
+      knobEl.style.setProperty('--pct', Math.round(normalized * 73) + '%');
+      knobEl.style.setProperty('--angle', (-135 + normalized * 270) + 'deg');
+      valueEl.textContent = text;
+    }
+
+    function promptManualValue(blockKey, param) {
+      const meta = param.meta || rangeMeta(0, 10, 0.1, '', 1);
+
+      if (meta.kind === 'enum') {
+        const entered = window.prompt('Enter option number for ' + param.name + String.fromCharCode(10) + meta.options.map((x, i) => i + ': ' + x).join(String.fromCharCode(10)), String(param.value));
+        if (entered === null) return;
+        setParamValue(blockKey, param, Number(entered), true);
+        return;
+      }
+
+      const entered = window.prompt(
+        'Enter value for ' + param.name + ' (' + meta.min + ' to ' + meta.max + (meta.unit ? ' ' + meta.unit : '') + ')',
+        String(param.value)
+      );
+
+      if (entered === null) return;
+      setParamValue(blockKey, param, Number(entered), true);
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function decimalsFromStep(step) {
+      const s = String(step);
+      return s.includes('.') ? s.split('.')[1].length : 0;
+    }
+
+    function roundToStep(value, step) {
+      if (!step) return value;
+      const rounded = Math.round(value / step) * step;
+      return Number(rounded.toFixed(decimalsFromStep(step)));
+    }
+
+    function isParamDisabled(block, param) {
+      if (!block || !param) return false;
+
+      const name = normaliseName(param.name);
+
+      if (name.includes('sync note')) {
+        const sync = relatedSyncParam(block.params, param.name);
+        return sync ? isSyncOff(sync) : false;
+      }
+
+      if (name === 'delay time' || name === 'delay time l' || name === 'delay time r' ||
+          name === 'rate' || name === 'speed') {
+        const sync = relatedSyncParam(block.params, param.name);
+        return sync ? !isSyncOff(sync) : false;
+      }
+
+      return false;
+    }
+
+    function relatedSyncParam(params, paramName) {
+      const n = normaliseName(paramName);
+
+      if (n.includes(' l')) {
+        return params.find(p => normaliseName(p.name) === 'sync l') || params.find(p => normaliseName(p.name) === 'sync');
+      }
+
+      if (n.includes(' r')) {
+        return params.find(p => normaliseName(p.name) === 'sync r') || params.find(p => normaliseName(p.name) === 'sync');
+      }
+
+      return params.find(p => normaliseName(p.name) === 'sync');
+    }
+
+    function isSyncOff(syncParam) {
+      if (!syncParam || !syncParam.meta || syncParam.meta.kind !== 'enum') return true;
+
+      const label = String(syncParam.meta.options[syncParam.value] || '').toLowerCase();
+      return label === 'off';
+    }
+
+    function renderPresetSelect() {
+      const select = $('presetSelect');
+      select.innerHTML = '';
+      for (let i = 1; i <= 64; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i + '  ·  ' + (state.presetNames.get(i) || ('Preset ' + i)) +
+          (i === state.selectedPreset && state.presetDirty ? ' *' : '');
+        if (i === state.selectedPreset) option.selected = true;
+        select.appendChild(option);
+      }
+    }
+
+    function renderCaptureIR() {
+      const capture = $('captureSelect');
+      capture.innerHTML = '';
+
+      const currentName = String(state.currentCapture.name || '').trim().toLowerCase();
+      const sameName = name => currentName && String(name).trim().toLowerCase() === currentName;
+      let selectedCaptureValue = 'library';
+
+      // 25 slots = 5 banks x 5 positions, then the device library.
+      for (let bank = 1; bank <= 5; bank++) {
+        const group = document.createElement('optgroup');
+        group.label = 'Bank ' + bank;
+        for (let pos = 1; pos <= 5; pos++) {
+          const i = (bank - 1) * 5 + pos;
+          const name = state.captureNames.get(i) || ('Capture ' + i);
+          const option = document.createElement('option');
+          option.value = String(i);
+          option.textContent = bank + '-' + pos + '  ' + name;
+          group.appendChild(option);
+          if (selectedCaptureValue === 'library' && sameName(name)) selectedCaptureValue = String(i);
+        }
+        capture.appendChild(group);
+      }
+
+      [['factory', 'Library · Factory', 'lf:'], ['user', 'Library · User', 'lu:']].forEach(([kind, label, prefix]) => {
+        const items = state.library[kind];
+        if (!items.length) return;
+        const group = document.createElement('optgroup');
+        group.label = label + ' (' + items.length + ')';
+        items.forEach(item => {
+          const option = document.createElement('option');
+          option.value = prefix + item.index;
+          option.textContent = item.name;
+          group.appendChild(option);
+          if (selectedCaptureValue === 'library' && sameName(item.name)) selectedCaptureValue = option.value;
+        });
+        capture.appendChild(group);
+      });
+
+      if (selectedCaptureValue === 'library') {
+        const libraryOption = document.createElement('option');
+        libraryOption.value = 'library';
+        libraryOption.textContent = state.currentCapture.name ? 'Library: ' + state.currentCapture.name : (state.library.loaded ? 'Library' : 'Library (loading…)');
+        capture.insertBefore(libraryOption, capture.firstChild);
+      }
+
+      capture.value = selectedCaptureValue;
+      $('currentCaptureText').textContent = state.capture.on
+        ? 'Current: ' + (state.currentCapture.name || '—') + (state.currentCapture.inBank ? '' : '  (Library)')
+        : 'Current: Capture bypassed';
+
+      capture.onchange = e => {
+        const value = e.target.value;
+        if (value === 'library') { renderCaptureIR(); return; }
+        if (value.startsWith('lf:')) { loadLibraryCapture('factory', Number(value.slice(3))); return; }
+        if (value.startsWith('lu:')) { loadLibraryCapture('user', Number(value.slice(3))); return; }
+        setCapture(Number(value));
+      };
+
+      const ir = $('irSelect');
+      ir.innerHTML = '';
+
+      let selectedIRValue = 'library';
+
+      for (let i = 1; i <= 5; i++) {
+        const name = state.irNames.get(i) || ('IR ' + i);
+        const option = document.createElement('option');
+        option.value = String(i);
+        option.textContent = i + '. ' + name;
+        ir.appendChild(option);
+
+        if (state.currentIR.shortName && name.trim().toLowerCase() === state.currentIR.shortName.trim().toLowerCase()) {
+          selectedIRValue = String(i);
+        }
+      }
+
+      const irSameName = name => state.currentIR.shortName && String(name).trim().toLowerCase() === state.currentIR.shortName.trim().toLowerCase();
+      [['irFactory', 'Library · Factory Cabs', 'if:'], ['irUser', 'Library · User IRs', 'iu:']].forEach(([kind, label, prefix]) => {
+        const items = state.library[kind];
+        if (!items.length) return;
+        const group = document.createElement('optgroup');
+        group.label = label + ' (' + items.length + ')';
+        items.forEach(item => {
+          const option = document.createElement('option');
+          option.value = prefix + item.index;
+          option.textContent = item.name;
+          group.appendChild(option);
+          if (selectedIRValue === 'library' && irSameName(item.name)) selectedIRValue = option.value;
+        });
+        ir.appendChild(group);
+      });
+
+      if (selectedIRValue === 'library') {
+        const irLibraryOption = document.createElement('option');
+        irLibraryOption.value = 'library';
+        irLibraryOption.textContent = state.currentIR.shortName ? 'Library: ' + state.currentIR.shortName : 'Library';
+        ir.insertBefore(irLibraryOption, ir.firstChild);
+      }
+
+      ir.value = selectedIRValue;
+      $('currentIRText').textContent = state.cabIR.on
+       ? 'Current: ' + (state.currentIR.shortName || '—') + (state.currentIR.inBank ? '' : '  (Library)')
+       : 'Current: Cab/IR bypassed';
+
+      renderCaptureIRExtraParams();
+
+      ir.onchange = async e => {
+        const value = e.target.value;
+        if (value === 'library') { renderCaptureIR(); return; }
+        if (value.startsWith('if:')) { loadLibraryCab('irFactory', Number(value.slice(3))); return; }
+        if (value.startsWith('iu:')) { loadLibraryCab('irUser', Number(value.slice(3))); return; }
+
+        const slot = Number(e.target.value);
+        const name = state.irNames.get(slot) || ('IR ' + slot);
+
+        state.currentIR.shortName = name;
+        state.currentIR.fullName = name;
+        state.currentIR.inBank = true;
+        state.currentIR.slot = slot;
+
+        renderCaptureIR();
+
+        await selectCabIRSlot(slot);
+      };
+
+    const captureToggle = $('captureToggle');
+    if (captureToggle) {
+      captureToggle.classList.toggle('on', state.capture.on);
+      captureToggle.onclick = () => {
+        if (state.capture.on) {
+          selectCaptureSlot(0);
+        } else {
+          const target = state.capture.lastActiveSlot;
+          if (!target) log('No remembered Capture slot for this preset; defaulting to slot 1.');
+          setCapture(target || 1);
+        }
+      };
+    }
+
+    const cabToggle = $('cabIRToggle');
+    if (cabToggle) {
+      cabToggle.classList.toggle('on', state.cabIR.on);
+      cabToggle.onclick = () => {
+        if (state.cabIR.on) {
+          selectCabIRSlot(0);
+        } else {
+          const target = state.cabIR.lastActiveSlot;
+          if (!target) log('No remembered Cab/IR slot for this preset; defaulting to slot 1.');
+          selectCabIRSlot(target || 1);
+        }
+      };
+    }
+
+    capture.disabled = !state.capture.on;
+    capture.style.opacity = state.capture.on ? '1' : '0.35';
+
+    ir.disabled = !state.cabIR.on;
+    ir.style.opacity = state.cabIR.on ? '1' : '0.35';
+
+    const captureVolSlider = $('captureVolumeSlider');
+    if (captureVolSlider) {
+      captureVolSlider.disabled = !state.capture.on;
+      const captureVolWrap = captureVolSlider.closest('.placeholder-param') || captureVolSlider.parentElement;
+      if (captureVolWrap) captureVolWrap.style.opacity = state.capture.on ? '1' : '0.35';
+    }
+    }
+    
+    function renderCaptureIRExtraParams() {
+      const captureBox = $('captureExtraParams');
+      if (captureBox) {
+        captureBox.innerHTML = '';
+      }
+
+      renderCabIRControls();
+    }
+
+    function isFactoryCabIR() {
+      const full = String(state.currentIR.fullName || '');
+      const short = String(state.currentIR.shortName || '');
+    
+      const micNames = [
+        'Condenser 184',
+        'Condenser 414',
+        'Dynamic 421',
+        'Dynamic 57',
+        'Ribbon 160'
+      ];
+
+      return micNames.some(mic =>
+        full.includes('/' + mic + '/') ||
+        full.includes(mic) ||
+        short.includes('/' + mic + '/')
+      );
+    }
+
+    function renderCabIRControls() {
+      const box = $('irExtraParams');
+      if (!box) return;
+
+      const isFactory = isFactoryCabIR();
+      const on = state.cabIR.on;
+
+      box.innerHTML = '';
+      box.style.gridTemplateColumns = 'repeat(5, minmax(70px, 1fr))';
+
+      box.appendChild(renderSmallSelect('Mic', 'cabMicSelect', [
+        'Condenser 184',
+        'Condenser 414',
+        'Dynamic 421',
+        'Dynamic 57',
+        'Ribbon 160'
+      ], isFactory && on, state.cabIR.mic, value => {
+        setCabIRMicPosition(value, state.cabIR.position);
+      }));
+
+      box.appendChild(renderSmallSelect('Position', 'cabPositionSelect', [
+        '1', '2', '3', '4', '5', '6'
+      ], isFactory && on, String(state.cabIR.position || 1), value => {
+        setCabIRMicPosition(state.cabIR.mic, Number(value));
+      }));
+
+      box.appendChild(renderVerticalSlider('Level', 'cabLevelSlider', -96, 12, 0.1, 'dB', state.cabIR.levelDb, value => {
+        setCabIRLevelDb(value);
+      }, on));
+
+      box.appendChild(renderVerticalSlider('High Pass', 'cabHighPassSlider', 20, 800, 1, 'Hz', state.cabIR.highPassHz, value => {
+        setCabIRHighPassHz(value);
+      }, on));
+
+      box.appendChild(renderVerticalSlider('Low Pass', 'cabLowPassSlider', 1000, 20000, 1, 'Hz', state.cabIR.lowPassHz, value => {
+        setCabIRLowPassHz(value);
+      }, on));
+    }
+
+    function renderSmallSelect(label, id, options, enabled, selectedValue, onChange) {
+      const wrap = document.createElement('div');
+      wrap.className = 'placeholder-param';
+      wrap.style.opacity = enabled ? '1' : '0.35';
+      wrap.style.pointerEvents = enabled ? 'auto' : 'none';
+
+      const name = document.createElement('div');
+      name.className = 'param-name';
+      name.textContent = label;
+
+      const select = document.createElement('select');
+      select.id = id;
+      select.disabled = !enabled;
+      select.style.fontSize = '11px';
+      select.style.padding = '6px';
+
+      options.forEach(optionText => {
+        const option = document.createElement('option');
+        option.value = optionText;
+        option.textContent = optionText;
+        if (String(optionText) === String(selectedValue)) option.selected = true;
+        select.appendChild(option);
+      });
+
+      select.addEventListener('change', e => {
+        if (!enabled || !onChange) return;
+        onChange(e.target.value);
+      });
+
+      wrap.appendChild(name);
+      wrap.appendChild(select);
+      return wrap;
+    }
+
+    function renderVerticalSlider(label, id, min, max, step, unit, value, onChange, enabled) {
+      const wrap = document.createElement('div');
+      wrap.className = 'placeholder-param';
+      wrap.style.opacity = enabled === false ? '0.35' : '1';
+      wrap.style.pointerEvents = enabled === false ? 'none' : 'auto';
+
+      const name = document.createElement('div');
+      name.className = 'param-name';
+      name.textContent = label;
+
+      const slider = document.createElement('input');
+      slider.id = id;
+      slider.type = 'range';
+      slider.min = min;
+      slider.max = max;
+      slider.step = step;
+      slider.value = value;
+      slider.disabled = enabled === false;
+      slider.style.width = '90px';
+
+      const valueText = document.createElement('div');
+      valueText.className = 'value-text';
+      valueText.textContent = formatCabIRSliderValue(value, unit, step);
+
+      slider.addEventListener('input', () => {
+        valueText.textContent = formatCabIRSliderValue(slider.value, unit, step);
+        if (enabled === false || !onChange) return;
+        onChange(Number(slider.value));
+      });
+
+      slider.addEventListener('change', () => {
+        if (enabled === false || !onChange) return;
+        onChange(Number(slider.value));
+      });
+
+      wrap.appendChild(name);
+      wrap.appendChild(slider);
+      wrap.appendChild(valueText);
+      return wrap;
+    }
+
+    function formatCabIRSliderValue(value, unit, step) {
+      const decimals = decimalsFromStep(step || 1);
+      return Number(value).toFixed(decimals) + ' ' + unit;
+    }
+
+function renderGate() {
+      const gate = $('gateToggle');
+      gate.classList.toggle('on', state.gate.on);
+      gate.onclick = () => {
+        state.gate.on = !state.gate.on;
+        renderGate();
+        setGateEnabled(state.gate.on);
+      };
+
+      const box = $('gateParams');
+      box.innerHTML = '';
+      box.appendChild(renderParam('gate', state.gate.params[0], 'var(--white)', true, state.gate));
+    }
+
+    function renderParam(blockKey, param, color, canSend, block = null) {
+      const disabled = block ? isParamDisabled(block, param) : false;
+
+      if (param.meta && param.meta.kind === 'enum') {
+        if (param.meta.options.length > 6) return renderSteppedParam(blockKey, param, color, canSend, disabled);
+        return renderSwitchParam(blockKey, param, color, canSend, disabled);
+      }
+
+      return renderKnobParam(blockKey, param, color, canSend, disabled);
+    }
+
+    function renderSwitchParam(blockKey, param, color, canSend, disabled) {
+      const p = document.createElement('div');
+      p.className = 'switch-param' + (disabled ? ' param-disabled' : '');
+      p.style.setProperty('--block-color', color);
+
+      const name = document.createElement('div');
+      name.className = 'param-name';
+      name.textContent = param.name;
+      p.appendChild(name);
+
+      const pill = document.createElement('button');
+      pill.className = 'switch-pill';
+      pill.textContent = param.meta.options[param.value] || param.meta.options[0] || '—';
+      pill.title = param.meta.options.join(' → ');
+
+      pill.addEventListener('click', () => {
+        if (disabled) return;
+        const next = (Number(param.value) + 1) % param.meta.options.length;
+        param.value = next;
+        render();
+
+        if (canSend && FX_BLOCK_KEYS.includes(blockKey)) setFXParam(blockKey, param);
+      });
+
+      p.appendChild(pill);
+      return p;
+    }
+
+    function renderSteppedParam(blockKey, param, color, canSend, disabled) {
+      const p = document.createElement('div');
+      p.className = 'stepped-param' + (disabled ? ' param-disabled' : '');
+      p.style.setProperty('--block-color', color);
+
+      const name = document.createElement('div');
+      name.className = 'param-name';
+      name.textContent = param.name;
+      p.appendChild(name);
+
+      const select = document.createElement('select');
+      select.className = 'stepped-select';
+      select.disabled = disabled;
+
+      param.meta.options.forEach((label, idx) => {
+        const opt = document.createElement('option');
+        opt.value = String(idx);
+        opt.textContent = label;
+        opt.selected = idx === param.value;
+        select.appendChild(opt);
+      });
+
+      select.addEventListener('change', e => {
+        param.value = Number(e.target.value);
+        render();
+        if (canSend && FX_BLOCK_KEYS.includes(blockKey)) setFXParam(blockKey, param);
+      });
+
+      p.appendChild(select);
+      return p;
+    }
+
+    function renderKnobParam(blockKey, param, color, canSend, disabled) {
+      const meta = param.meta || rangeMeta(0, 10, 0.1, '', 1);
+
+      const p = document.createElement('div');
+      p.className = 'knob-param' + (disabled ? ' param-disabled' : '');
+      p.style.setProperty('--block-color', color);
+
+      const name = document.createElement('div');
+      name.className = 'param-name';
+      name.textContent = param.name;
+
+      const knobEl = document.createElement('div');
+      knobEl.className = 'knob';
+
+      const normalized = paramValueToNormalized(param);
+      const pct = Math.round(normalized * 73);
+      const angle = -135 + normalized * 270;
+
+      knobEl.style.setProperty('--pct', pct + '%');
+      knobEl.style.setProperty('--angle', angle + 'deg');
+      knobEl.title = disabled ? 'Locked by Sync setting' : 'Drag for coarse adjustment, scroll for fine adjustment';
+
+      const value = document.createElement('div');
+      value.className = 'value-text';
+      value.textContent = paramDisplayValue(param);
+
+      // Live update: only this knob is redrawn and the value is sent immediately
+      // (coalesced in the write queue), instead of re-rendering the whole editor.
+      const applyValue = rawValue => {
+        const next = coerceParamValue(param, rawValue);
+        if (next === null || next === param.value) return;
+        param.value = next;
+        updateKnobVisual(knobEl, value, paramValueToNormalized(param), paramDisplayValue(param));
+        if (canSend) sendParamValue(blockKey, param);
+      };
+
+      knobEl.addEventListener('wheel', e => {
+        e.preventDefault();
+        if (disabled) return;
+        const delta = e.deltaY < 0 ? (meta.step || 0.1) : -(meta.step || 0.1);
+        applyValue(Number(param.value) + delta);
+      }, { passive: false });
+
+      knobEl.addEventListener('pointerdown', e => {
+        if (disabled) return;
+        e.preventDefault();
+
+        const dragStartY = e.clientY;
+        const dragStartValue = Number(param.value);
+        const range = meta.max - meta.min;
+
+        const onMove = moveEvent => {
+          const delta = ((dragStartY - moveEvent.clientY) / 95) * range;
+          applyValue(dragStartValue + delta);
+        };
+
+        const onUp = () => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+          window.removeEventListener('pointercancel', onUp);
+        };
+
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onUp);
+      });
+      value.addEventListener('click', () => {
+        if (!disabled) promptManualValue(blockKey, param);
+      });
+
+      p.appendChild(name);
+      p.appendChild(knobEl);
+      p.appendChild(value);
+      return p;
+    }
+
+    const AMP_KNOBS = [
+      { key: 'gain', label: 'Gain' },
+      { key: 'bass', label: 'Bass' },
+      { key: 'mid', label: 'Mid' },
+      { key: 'treble', label: 'Treble' },
+      { key: 'level', label: 'Level' }
+    ];
+
+    function renderAmp() {
+      const box = $('ampKnobs');
+      if (!box) return;
+      box.innerHTML = '';
+      AMP_KNOBS.forEach(k => box.appendChild(renderAmpKnob(k.key, k.label)));
+    }
+
+    function renderAmpKnob(key, label) {
+      const p = document.createElement('div');
+      p.className = 'knob-param';
+      p.style.setProperty('--block-color', 'var(--white)');
+
+      const name = document.createElement('div');
+      name.className = 'param-name';
+      name.textContent = label;
+
+      const knobEl = document.createElement('div');
+      knobEl.className = 'knob';
+
+      const raw = state.amp[key];
+      const normalized = clamp(raw / 255, 0, 1);
+      const pct = Math.round(normalized * 73);
+      const angle = -135 + normalized * 270;
+
+      knobEl.style.setProperty('--pct', pct + '%');
+      knobEl.style.setProperty('--angle', angle + 'deg');
+      knobEl.title = 'Drag for coarse adjustment, scroll for fine adjustment';
+
+      const value = document.createElement('div');
+      value.className = 'value-text';
+      value.textContent = Math.round((raw / 255) * 100) + '%';
+      value.addEventListener('click', () => {
+        const entered = window.prompt('Enter value for ' + label + ' (0 to 100%)', String(Math.round((state.amp[key] / 255) * 100)));
+        if (entered === null) return;
+        const pctValue = clamp(Number(entered), 0, 100);
+        if (Number.isNaN(pctValue)) return;
+        applyRaw((pctValue / 100) * 255);
+      });
+
+      const applyRaw = newRaw => {
+        const next = clamp(Math.round(newRaw), 0, 255);
+        if (next === state.amp[key]) return;
+        state.amp[key] = next;
+        updateKnobVisual(knobEl, value, next / 255, Math.round((next / 255) * 100) + '%');
+        setAmpKnob(key, next);
+      };
+
+      knobEl.addEventListener('wheel', e => {
+        e.preventDefault();
+        applyRaw(state.amp[key] + (e.deltaY < 0 ? 3 : -3));
+      }, { passive: false });
+
+      knobEl.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        const dragStartY = e.clientY;
+        const dragStartValue = state.amp[key];
+
+        const onMove = moveEvent => {
+          const delta = ((dragStartY - moveEvent.clientY) / 95) * 255;
+          applyRaw(dragStartValue + delta);
+        };
+
+        const onUp = () => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+          window.removeEventListener('pointercancel', onUp);
+        };
+
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onUp);
+      });
+
+      p.appendChild(name);
+      p.appendChild(knobEl);
+      p.appendChild(value);
+      return p;
+    }
+
+    // Confirmed against real captured BLE write packets:
+    // 0B C0 18 <id> 20 <value varint> 28 00 1A 00 00 00
+    // id: gain=0, level=1, bass=2, mid=3, treble=4
+    // (separate ID space from the read-side current-state field numbers 3-7)
+    const AMP_WRITE_IDS = {
+      gain: 0x00,
+      level: 0x01,
+      bass: 0x02,
+      mid: 0x03,
+      treble: 0x04
+    };
+
+    async function setAmpKnob(key, rawValue) {
+      const id = AMP_WRITE_IDS[key];
+
+      if (id === undefined) {
+        log('Amp ' + key + ' set to raw=' + rawValue + ' (write not yet confirmed -- not sent to device)');
+        return;
+      }
+
+      const valueBytes = encodeVarint(clamp(Math.round(rawValue), 0, 255));
+      const payload = new Uint8Array([0x00, 0xC0, 0x18, id, 0x20, ...valueBytes, 0x28, 0x00, 0x1A, 0x00, 0x00, 0x00]);
+      payload[0] = payload.length - 2;
+
+      await writeC304('Amp ' + key + ' = ' + rawValue, payload, 'amp:' + key);
+    }
+
+    // Category colors of the official Cortex Cloud app (fx_xml_parser _getColorForCategory).
+    const FX_COLORS = {
+      overdrive: '#FF7000',
+      compressor: '#45F862',
+      equalizer: '#0A74E0',
+      filter: '#87DAFF',
+      modulation: '#3500F1',
+      delay: '#00FFDD',
+      reverb: '#00FFDD',
+      pitch: '#FFD236',
+      utility: '#FFFFFF',
+      none: '#5C5C5C'
+    };
+
+    // Official category + icon for a model (categories as in the app's ModelRepo.xml).
+    function fxStyle(model) {
+      const name = String((model && model.name) || '');
+      const category = String((model && model.category) || '');
+      if (!model || name === 'None') return { color: FX_COLORS.none, icon: null };
+      if (/comp|legendary 87/i.test(name)) return { color: FX_COLORS.compressor, icon: 'compressor' };
+      if (/graphic|parametric|low-high cut/i.test(name)) return { color: FX_COLORS.equalizer, icon: 'equalizer' };
+      if (/gate/i.test(name)) return { color: FX_COLORS.utility, icon: 'gate' };
+      if (/doubler/i.test(name)) return { color: FX_COLORS.utility, icon: 'doubler' };
+      if (/wah/i.test(name)) return { color: FX_COLORS.utility, icon: 'wah' };
+      if (category === 'Wah/Filter') return { color: FX_COLORS.filter, icon: 'filter' };
+      if (category === 'Overdrive') {
+        return { color: FX_COLORS.overdrive, icon: /fuzz/i.test(name) ? 'fuzz' : /bass|b3k/i.test(name) ? 'bass-overdrive' : 'overdrive' };
+      }
+      if (category === 'Compressor') return { color: FX_COLORS.compressor, icon: 'compressor' };
+      if (category === 'Modulation') return { color: FX_COLORS.modulation, icon: 'modulation' };
+      if (category === 'Delay') return { color: FX_COLORS.delay, icon: 'delay' };
+      if (category === 'Reverb') return { color: FX_COLORS.reverb, icon: 'reverb' };
+      if (category === 'Pitch') return { color: FX_COLORS.pitch, icon: 'pitch' };
+      return { color: FX_COLORS.utility, icon: 'utility' };
+    }
+
+    // Black icon on light tiles, white on dark ones (modulation, EQ).
+    function iconInk(color) {
+      const [r, g, b] = [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16) / 255);
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.3 ? '#fff' : '#000';
+    }
+
+    function fxIconHTML(icon) {
+      return icon ? '<span class="fx-icon" style="--icon: var(--ico-' + icon + ')"></span>' : '<span class="fx-icon fx-icon-empty"></span>';
+    }
+
+    function renderBlock(key, block) {
+      const style = fxStyle(block.models.find(m => m.name === block.model));
+      const el = document.createElement('div');
+      el.className = 'block ' + (block.on ? 'active' : '');
+      el.style.setProperty('--block-color', style.color);
+      el.style.setProperty('--icon-ink', iconInk(style.color));
+
+      const head = document.createElement('div');
+      head.className = 'block-head';
+      head.innerHTML = '<div class="block-title">' + fxIconHTML(style.icon) + '<h2>' + block.title + '</h2></div>';
+
+      const toggle = document.createElement('div');
+      toggle.className = 'toggle-switch ' + (block.on ? 'on' : '');
+      toggle.innerHTML = '<div class="toggle-dot"></div>';
+      toggle.addEventListener('click', () => {
+        if (!block.on && block.model === 'None') return;
+        block.on = !block.on;
+        render();
+        setFXBlockEnabled(key, block.on);
+      });
+
+      head.appendChild(toggle);
+      el.appendChild(head);
+
+      const select = document.createElement('select');
+      select.className = 'model-select';
+
+      const grouped = {};
+      block.models.forEach(model => {
+        const category = model.category || 'Other';
+        if (!grouped[category]) grouped[category] = [];
+        grouped[category].push(model);
+      });
+
+      Object.entries(grouped).forEach(([category, models]) => {
+        const group = document.createElement('optgroup');
+        group.label = category;
+
+        models.forEach(model => {
+          const opt = document.createElement('option');
+          opt.value = model.name;
+          opt.textContent = model.name;
+          opt.selected = model.name === block.model;
+          group.appendChild(opt);
+        });
+
+        select.appendChild(group);
+      });
+
+      select.addEventListener('change', e => {
+        const selected = block.models.find(m => m.name === e.target.value);
+
+        block.model = e.target.value;
+        block.params = selected && selected.params ? structuredClone(selected.params) : [];
+        render();
+
+        if (selected && selected.id) setFXModel(key, e.target.value);
+      });
+
+      el.appendChild(select);
+
+      
+      if (typeof MODEL_IMAGES !== 'undefined' && MODEL_IMAGES[block.model]) {
+        const imgWrap = document.createElement('div');
+        imgWrap.style.textAlign = 'center';
+        imgWrap.style.marginTop = '12px';
+        imgWrap.style.marginBottom = '4px';
+        imgWrap.style.minHeight = '120px'; // Prevent jumping UI
+        
+        const img = document.createElement('img');
+        img.src = MODEL_IMAGES[block.model];
+        img.alt = block.model;
+        
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '120px'; 
+        img.style.objectFit = 'contain';
+        img.style.borderRadius = '4px';
+        img.style.filter = 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))';
+        
+        imgWrap.appendChild(img);
+        el.appendChild(imgWrap);
+      }
+
+      const div = document.createElement('div');
+      div.className = 'divider';
+      el.appendChild(div);
+
+      const grid = document.createElement('div');
+      grid.className = 'param-grid';
+
+      const modelDef = block.models.find(m => m.name === block.model);
+      const orderedParams = modelDef && modelDef.displayOrder
+        ? modelDef.displayOrder.map(i => block.params[i]).filter(Boolean)
+        : block.params;
+
+      orderedParams.forEach(param => grid.appendChild(renderParam(key, param, style.color, FX_BLOCK_KEYS.includes(key), block)));
+
+      el.appendChild(grid);
+      return el;
+    }
+
+    function render() {
+      renderPresetSelect();
+      renderCaptureIR();
+      renderGate();
+      renderAmp();
+      const chain = $('chain');
+      chain.innerHTML = '';
+      Object.entries(state.blocks).forEach(([key, block]) => chain.appendChild(renderBlock(key, block)));
+    }
+
+    function disconnect() {
+      if (state.device && state.device.gatt.connected) {
+        state.device.gatt.disconnect();
+      } else {
+        onDisconnected();
+      }
+    }
+
+    $('connectBtn').addEventListener('click', connectAll);
+    $('refreshBtn').addEventListener('click', refreshLists);
+    $('disconnectBtn').addEventListener('click', disconnect);
+    $('saveBtn').addEventListener('click', savePreset);
+    $('renameBtn').addEventListener('click', renamePreset);
+    $('tunerBtn').addEventListener('click', () => openTuner());
+    $('tunerClose').addEventListener('click', () => closeTuner());
+    $('tunerOverlay').addEventListener('click', e => { if (e.target === $('tunerOverlay')) closeTuner(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.tuner.open) closeTuner(); });
+    $('tunerFreq').addEventListener('change', e => {
+      const hz = Math.round(clamp(Number(e.target.value) || 440, 400, 480));
+      e.target.value = String(hz);
+      setTunerOption({ baseFrequency: hz });
+    });
+    $('tunerMute').addEventListener('click', () => setTunerOption({ muted: !state.tuner.muted }));
+    $('presetPrev').addEventListener('click', () => selectPreset(Math.max(1, state.selectedPreset - 1)));
+    $('presetNext').addEventListener('click', () => selectPreset(Math.min(64, state.selectedPreset + 1)));
+    $('copyLogBtn').addEventListener('click', copyLog);
+    $('presetSelect').addEventListener('change', e => selectPreset(Number(e.target.value)));
+
+    if (!navigator.bluetooth) $('unsupported').style.display = 'block';
+
+    render();
+    log('Prototype loaded.');
+    log('Protocol mode: manual sync + protobuf FE metadata parser + current-state UI update + typed parameter UI');
+  </script>
+</body>
+</html>
