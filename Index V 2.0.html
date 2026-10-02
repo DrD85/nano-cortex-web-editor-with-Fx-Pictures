@@ -319,6 +319,7 @@
       <span id="dot" class="dot"></span><span id="status">Disconnected</span>
       <button id="refreshBtn" class="btn-small">Refresh</button>
       <button id="disconnectBtn" class="btn-small btn-disconnect">Disconnect</button>
+      <button id="copyLogBtn" class="btn-small">Log kopieren</button>
     </div>
   </header>
 
@@ -927,9 +928,29 @@
 
     const $ = id => document.getElementById(id);
 
+    const logLines = [];
+
     function log(message) {
       const line = new Date().toLocaleTimeString() + ' ' + message;
       console.log(line);
+      logLines.push(line);
+      if (logLines.length > 5000) logLines.splice(0, logLines.length - 5000);
+    }
+
+    async function copyLog() {
+      const text = logLines.join(String.fromCharCode(10));
+      try {
+        await navigator.clipboard.writeText(text);
+        $('copyLogBtn').textContent = 'Kopiert (' + logLines.length + ' Zeilen)';
+      } catch (err) {
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'nano-log.txt';
+        a.click();
+        $('copyLogBtn').textContent = 'Log gespeichert';
+      }
+      setTimeout(() => { $('copyLogBtn').textContent = 'Log kopieren'; }, 2000);
     }
 
     function hex(bytes) { return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '); }
@@ -1042,18 +1063,27 @@
     async function connectMIDI() {
       try {
         if (!navigator.requestMIDIAccess) throw new Error('Web MIDI is not available. Use Chrome or Edge.');
-        const access = await navigator.requestMIDIAccess({ sysex: false });
-        state.midiAccess = access;
-        const outputs = Array.from(access.outputs.values());
+        const access = state.midiAccess || await navigator.requestMIDIAccess({ sysex: false });
+        if (!state.midiAccess) {
+          state.midiAccess = access;
+          // Pick up the USB cable when it is plugged in after connecting.
+          access.onstatechange = () => { if (!state.midiOutput || state.midiOutput.state !== 'connected') connectMIDI(); };
+        }
+        const outputs = Array.from(access.outputs.values()).filter(output => output.state !== 'disconnected');
+        log('MIDI outputs: ' + (outputs.map(output => output.name).join(', ') || 'none'));
+        // The Nano only accepts Program Change over USB MIDI (port name "Nano Cortex").
         const nanoOutput = outputs.find(output => {
           const name = (output.name || '').toLowerCase();
           return name.includes('nano') || name.includes('cortex') || name.includes('neural');
-        }) || outputs[0];
-        if (!nanoOutput) throw new Error('No MIDI output found. Pair/connect Nano Cortex Bluetooth MIDI in macOS first.');
+        });
+        if (!nanoOutput) throw new Error('No Nano Cortex MIDI output found. Connect the Nano via USB cable to switch presets.');
         state.midiOutput = nanoOutput;
         log('MIDI output selected: ' + nanoOutput.name);
+        if (state.connected) setStatus('Connected', true);
       } catch (err) {
+        state.midiOutput = null;
         log('MIDI connect failed: ' + err.message);
+        if (state.connected) setStatus('Connected – USB-Kabel für Preset-Wechsel anschließen', true);
       }
     }
 
@@ -1070,10 +1100,7 @@
 
         renderPresetSelect();
 
-        if (state.midiOutput) {
-          state.midiOutput.send([0xC0, state.selectedPreset - 1]);
-          log('MIDI PC sent: preset ' + state.selectedPreset + ', PC ' + (state.selectedPreset - 1));
-        }
+        if (state.midiOutput) sendPresetChange(state.selectedPreset);
 
         beginPresetLoad();
         return;
@@ -1085,10 +1112,7 @@
         state.selectedPreset = 1;
         renderPresetSelect();
 
-        if (state.midiOutput) {
-          state.midiOutput.send([0xC0, 0]);
-          log('MIDI PC sent: preset 1, PC 0');
-        }
+        if (state.midiOutput) sendPresetChange(1);
 
         beginPresetLoad();
       }, 2200);
@@ -1107,7 +1131,7 @@
         state.presetLoadTimer = null;
         log('Lade neue Preset-Daten (Refresh)...');
         requestCurrentPresetState();
-      }, 500);
+      }, 450);
     }
 
     async function requestCurrentPresetState() {
@@ -1286,11 +1310,10 @@
       state.stateBytes = [];
       state.stateMode = 'idle';
 
-      const wasPresetLoad = state.protocol.presetLoad;
       state.protocol.presetLoad = false;
 
       requestCabIRParamRefresh();
-      queueFXParamRefreshes(wasPresetLoad);
+      queueFXParamRefreshes();
     }
 
     const captureSlider = document.getElementById('captureVolumeSlider');
@@ -1532,9 +1555,11 @@
       );
     }
 
+    // The first byte is the frame length, which varies with the cab/mic name
+    // length, so it must not be matched. FX param replies continue with 0x22.
     function isCabIRParamRefreshResponse(data) {
       return data.length > 20 &&
-        data[0] === 0x8E &&
+        data[4] !== 0x22 &&
         data[1] === 0xC0 &&
         data[2] === 0x08 &&
         data[3] === 0x06;
@@ -1546,6 +1571,19 @@
       const parts = parseCabIRNameParts(text);
       if (parts.mic) state.cabIR.mic = parts.mic;
       if (parts.position !== null) state.cabIR.position = parts.position;
+
+      // Replies without a "cab/mic/pos" string carry mic and zero-based position
+      // in the first nested field 5: { 2: cab, 3: posZero, 4: mic }.
+      if (!parts.mic) {
+        const top = parseProtoFields(data.slice(2, data.length - 4));
+        const cabEntry = top[5] && top[5].find(entry => entry.wire === 2);
+        if (cabEntry) {
+          const cab = parseProtoFields(cabEntry.raw);
+          const mic = firstString(cab, 4);
+          if (mic) state.cabIR.mic = mic;
+          if (cab[3] && cab[3][0] && cab[3][0].wire === 0) state.cabIR.position = cab[3][0].value + 1;
+        }
+      }
 
       const paramBlob = extractCabIRParamBlob(data);
 
@@ -1574,10 +1612,15 @@
       renderCaptureIR();
     }
 
+    // Field 8 (0x42 <len>) holds up to three float fields: 0D level, 15 high pass,
+    // 1D low pass. Fields equal to 0.0 are omitted by the device (protobuf), so
+    // the blob is 5, 10 or 15 bytes long.
     function extractCabIRParamBlob(data) {
-      for (let i = 0; i < data.length - 17; i++) {
-        if (data[i] === 0x42 && data[i + 1] === 0x0F) {
-          return data.slice(i + 2, i + 17);
+      for (let i = 0; i + 2 < data.length; i++) {
+        const len = data[i + 1];
+        if (data[i] === 0x42 && len >= 5 && len <= 15 && len % 5 === 0 &&
+            [0x0D, 0x15, 0x1D].includes(data[i + 2]) && i + 2 + len <= data.length) {
+          return data.slice(i + 2, i + 2 + len);
         }
       }
 
@@ -1585,10 +1628,11 @@
     }
 
     function parseCabIRParamBlob(blob) {
+      // Omitted fields are 0.0 (protobuf default).
       const out = {
-        levelNorm: null,
-        highPassNorm: null,
-        lowPassNorm: null
+        levelNorm: 0,
+        highPassNorm: 0,
+        lowPassNorm: 0
       };
 
       for (let i = 0; i + 4 < blob.length;) {
@@ -1712,13 +1756,12 @@
       state.pendingParamTimer = null;
     }
 
-    // includeBypassed: after a preset change, bypassed blocks also need their
-    // values re-read, otherwise they keep showing the previous preset's values.
-    function queueFXParamRefreshes(includeBypassed = false) {
+    // Only active blocks are read: querying bypassed blocks crashed the Nano.
+    function queueFXParamRefreshes() {
       cancelFXParamRefresh();
       state.paramRefreshQueue = FX_BLOCK_KEYS.filter(key => {
         const block = state.blocks[key];
-        return block && (block.on || includeBypassed) && block.model !== 'None' && block.params && block.params.length > 0;
+        return block && block.on && block.model !== 'None' && block.params && block.params.length > 0;
       });
 
       if (state.paramRefreshQueue.length === 0) {
@@ -2047,6 +2090,13 @@ function parseSelectedCaptureState(payload) {
     }
 
     async function selectPreset(preset) {
+      if (!state.midiOutput) await connectMIDI();
+      if (!state.midiOutput) {
+        log('Preset ' + preset + ' not sent: no USB MIDI connection to the Nano.');
+        renderPresetSelect();
+        return;
+      }
+
       state.selectedPreset = preset;
       state.capture.lastActiveSlot = null;
       state.cabIR.lastActiveSlot = null;
@@ -2057,11 +2107,22 @@ function parseSelectedCaptureState(payload) {
         return; 
       }
 
+      sendPresetChange(preset);
+      beginPresetLoad();
+    }
+
+    // Preset-change acknowledgement, written to C304 after every Program Change while
+    // BLE is connected (flow: PC -> ack -> state request). Without it the Nano stays in a
+    // pending preset-change context and ignores further PCs and capture/cab/FX writes
+    // until EXIT is pressed on the device.
+    // Source: rixrix/deskop-nano-cortex, ble_encoder.rs preset_change_ack_frame (Apache-2.0).
+    const PRESET_CHANGE_ACK = new Uint8Array([0x06, 0xC0, 0x20, 0x01, 0x1E, 0x00, 0x00, 0x00]);
+
+    function sendPresetChange(preset) {
       const pc = preset - 1;
       state.midiOutput.send([0xC0, pc]);
       log('MIDI PC sent: preset ' + preset + ', PC ' + pc);
-
-      beginPresetLoad();
+      if (state.connected) writeC304('Preset change ack', PRESET_CHANGE_ACK);
     }
 
     async function refreshLists() { await syncMetadataAndState(); }
@@ -3070,6 +3131,7 @@ function renderGate() {
     $('refreshBtn').addEventListener('click', refreshLists);
     $('disconnectBtn').addEventListener('click', disconnect);
     $('saveBtn').addEventListener('click', savePreset);
+    $('copyLogBtn').addEventListener('click', copyLog);
     $('presetSelect').addEventListener('change', e => selectPreset(Number(e.target.value)));
 
     if (!navigator.bluetooth) $('unsupported').style.display = 'block';
