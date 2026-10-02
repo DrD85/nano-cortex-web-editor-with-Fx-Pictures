@@ -1,3 +1,11 @@
+Update 2.10 V3
+-Access to alle the captures from the Library. 
+- Added Icons and colors like on the Quad Coretx
+- Access to all IRs on device
+- Added Tuner
+- sort all captures in the Library alphabetically 
+<img width="1496" height="764" alt="image" src="https://github.com/user-attachments/assets/fcadbe17-1fc1-4006-b4ed-a524e3d9732f" />
+
 Update: 02.10:
 - Response Time is now much faster and without data Loss
 - Preset switching works more reliably and faster
